@@ -20,9 +20,106 @@ export default function LogTab({ onLogSaved }: LogTabProps) {
   const [savedLogDate, setSavedLogDate] = useState('');
   const [mounted, setMounted] = useState(false);
 
+  // 音声入力関連のステート
+  const [isSpeechSupported, setIsSpeechSupported] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [listeningError, setListeningError] = useState<string | null>(null);
+  const [interimTranscript, setInterimTranscript] = useState('');
+
+  // クライアントサイドでのみ音声入力をサポートしているか確認（SSRハイドレーション回避）
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        setIsSpeechSupported(true);
+      }
+    }
+  }, []);
+
   React.useEffect(() => {
     setMounted(true);
   }, []);
+
+  const handleSpeechResult = (transcript: string) => {
+    if (!transcript.trim()) return;
+    setInputText(prev => {
+      const trimmed = prev.trim();
+      return trimmed ? `${trimmed} ${transcript}` : transcript;
+    });
+  };
+
+  const startListening = () => {
+    if (typeof window === 'undefined') return;
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setListeningError('お使いのブラウザは音声入力をサポートしていません。');
+      return;
+    }
+
+    try {
+      const rec = new SpeechRecognition();
+      rec.lang = 'ja-JP';
+      rec.continuous = false;
+      rec.interimResults = true;
+
+      rec.onstart = () => {
+        setIsListening(true);
+        setListeningError(null);
+        setInterimTranscript('');
+      };
+
+      rec.onresult = (event: any) => {
+        let interim = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            const transcript = event.results[i][0].transcript;
+            handleSpeechResult(transcript);
+          } else {
+            interim += event.results[i][0].transcript;
+          }
+        }
+        if (interim) {
+          setInterimTranscript(interim);
+        }
+      };
+
+      rec.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        if (event.error === 'not-allowed') {
+          setListeningError('マイクの使用許可が拒否されました。設定をご確認ください。');
+        } else if (event.error === 'no-speech') {
+          setListeningError('音声が検出されませんでした。');
+        } else {
+          setListeningError(`エラーが発生しました: ${event.error}`);
+        }
+        setTimeout(() => {
+          setIsListening(false);
+        }, 2500);
+      };
+
+      rec.onend = () => {
+        setIsListening(false);
+      };
+
+      rec.start();
+      (window as any)._activeLogRecognition = rec;
+    } catch (e) {
+      console.error(e);
+      setListeningError('音声入力の起動に失敗しました。');
+      setIsListening(false);
+    }
+  };
+
+  const stopListening = () => {
+    if (typeof window !== 'undefined' && (window as any)._activeLogRecognition) {
+      try {
+        (window as any)._activeLogRecognition.stop();
+      } catch (e) {
+        console.error(e);
+      }
+      setIsListening(false);
+    }
+  };
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,9 +226,24 @@ export default function LogTab({ onLogSaved }: LogTabProps) {
       {!generatedMarkdown && !loading && (
         <div className="bg-slate-800/80 backdrop-blur-md rounded-2xl p-4 border border-slate-700/50 shadow-xl space-y-4 animate-fade-in">
           <form onSubmit={handleGenerate} className="space-y-3">
-            <label htmlFor="meal-input" className="block text-xs font-bold text-emerald-400">
-              🍽️ 食べたものや感想を入力してください:
-            </label>
+            <div className="flex justify-between items-center mb-1">
+              <label htmlFor="meal-input" className="block text-xs font-bold text-emerald-400">
+                🍽️ 食べたものや感想を入力してください:
+              </label>
+              {isSpeechSupported && (
+                <button
+                  type="button"
+                  onClick={startListening}
+                  className="flex items-center gap-1 text-xxs font-extrabold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg active:scale-95 transition-all shadow-sm"
+                  title="音声で入力"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                  </svg>
+                  <span>音声入力</span>
+                </button>
+              )}
+            </div>
             <textarea
               id="meal-input"
               rows={5}
@@ -262,6 +374,56 @@ export default function LogTab({ onLogSaved }: LogTabProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
               </svg>
               <span>{loading ? '保存中...' : 'この内容で保存する'}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 音声入力聞き取り中オーバーレイ（食事ログ用・エメラルドグリーンテーマ） */}
+      {isListening && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-md p-6">
+          <div className="bg-slate-900/95 border border-slate-800 rounded-3xl p-8 max-w-sm w-full flex flex-col items-center space-y-6 shadow-2xl text-center">
+            <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+              </span>
+              マイク聞き取り中...
+            </h3>
+            
+            {/* Pulsing Waveform Animation (Emerald/Teal Theme) */}
+            <div className="relative flex items-center justify-center w-28 h-28">
+              <div className="absolute inset-0 rounded-full bg-emerald-500/10 animate-ping" style={{ animationDuration: '3s' }}></div>
+              <div className="absolute inset-2 rounded-full bg-emerald-500/20 animate-ping" style={{ animationDuration: '2s' }}></div>
+              <div className="absolute inset-4 rounded-full bg-emerald-500/30 animate-pulse"></div>
+              <div className="z-10 w-16 h-16 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/30">
+                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+              </div>
+            </div>
+
+            <div className="space-y-2 w-full">
+              <p className="text-sm font-semibold text-emerald-300 min-h-[1.5rem] break-all">
+                {interimTranscript || 'お話ししてください...'}
+              </p>
+              <p className="text-xxs text-slate-400 leading-relaxed">
+                食べたおかずや感想などを、マイクに向かって自由にお話しください。
+              </p>
+            </div>
+
+            {listeningError && (
+              <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/25 px-3 py-2 rounded-xl w-full">
+                ⚠️ {listeningError}
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={stopListening}
+              className="px-6 py-2.5 bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-slate-600 text-slate-300 hover:text-white rounded-xl text-xs font-bold tracking-wider active:scale-95 transition-all w-full"
+            >
+              キャンセル
             </button>
           </div>
         </div>
