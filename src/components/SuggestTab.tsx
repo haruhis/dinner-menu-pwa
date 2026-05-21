@@ -7,6 +7,50 @@ import { MenuSuggestion, DietaryAnalysis } from '../lib/types';
 
 const QUICK_INGREDIENTS = ['豚肉', '鶏肉', 'キャベツ', '豆腐', '卵', 'トマト', '玉ねぎ', '魚'];
 
+// 日本語の助詞「と」や「や」に対応した賢いスプリット処理
+function parseJapaneseIngredients(text: string): string[] {
+  if (!text) return [];
+
+  // 記号類をスペースに置換
+  let normalized = text
+    .replace(/[、。，．.．・+＋]/g, ' ')
+    .trim();
+
+  // 「と」や「や」が含まれる一般的なひらがな名詞を、一時的に漢字・カタカナに置換して誤分割を防ぐ
+  const replacements: { [key: string]: string } = {
+    'さといも': '里芋',
+    'やまいも': '山芋',
+    'とまと': 'トマト',
+    'とうふ': '豆腐',
+    'なっとう': '納豆',
+    'とうもろこし': 'トウモロコシ',
+    'とろろ': 'トロロ',
+    'とりの': '鶏の',
+    'とり肉': '鶏肉',
+    'やさい': '野菜',
+    'じゃがいも': 'ジャガイモ',
+    'さつまいも': 'サツマイモ',
+  };
+
+  for (const [hiragana, replacement] of Object.entries(replacements)) {
+    normalized = normalized.replaceAll(hiragana, replacement);
+  }
+
+  // 「と」「や」および空白文字で分割
+  const rawTokens = normalized.split(/[\s|と|や]+/);
+
+  // 空文字や「と」「や」そのものをフィルタリングしてトリミング
+  const ingredients: string[] = [];
+  rawTokens.forEach(token => {
+    const clean = token.trim();
+    if (clean.length > 0 && clean !== 'と' && clean !== 'や') {
+      ingredients.push(clean);
+    }
+  });
+
+  return ingredients;
+}
+
 export default function SuggestTab() {
   const [inputText, setInputText] = useState('');
   const [ingredients, setIngredients] = useState<string[]>([]);
@@ -14,6 +58,22 @@ export default function SuggestTab() {
   const [loading, setLoading] = useState(false);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [dietaryTrend, setDietaryTrend] = useState<DietaryAnalysis | null>(null);
+
+  // 音声入力関連のステート
+  const [isSpeechSupported, setIsSpeechSupported] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [listeningError, setListeningError] = useState<string | null>(null);
+  const [interimTranscript, setInterimTranscript] = useState('');
+
+  // クライアントサイドでのみ音声入力をサポートしているか確認（SSRハイドレーション回避）
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        setIsSpeechSupported(true);
+      }
+    }
+  }, []);
 
   // Fetch initial suggestions (empty = random) on mount
   useEffect(() => {
@@ -71,6 +131,101 @@ export default function SuggestTab() {
     setIngredients(updatedIngs);
     setInputText('');
     fetchSuggestions(updatedIngs);
+  };
+
+  const handleSpeechResult = (transcript: string) => {
+    if (!transcript.trim()) return;
+
+    const parsed = parseJapaneseIngredients(transcript);
+    if (parsed.length === 0) return;
+
+    const updatedIngs = [...ingredients];
+    let addedAny = false;
+
+    parsed.forEach(item => {
+      if (!updatedIngs.includes(item)) {
+        updatedIngs.push(item);
+        addedAny = true;
+      }
+    });
+
+    if (addedAny) {
+      setIngredients(updatedIngs);
+      fetchSuggestions(updatedIngs);
+    }
+  };
+
+  const startListening = () => {
+    if (typeof window === 'undefined') return;
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setListeningError('お使いのブラウザは音声入力をサポートしていません。');
+      return;
+    }
+
+    try {
+      const rec = new SpeechRecognition();
+      rec.lang = 'ja-JP';
+      rec.continuous = false;
+      rec.interimResults = true;
+
+      rec.onstart = () => {
+        setIsListening(true);
+        setListeningError(null);
+        setInterimTranscript('');
+      };
+
+      rec.onresult = (event: any) => {
+        let interim = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            const transcript = event.results[i][0].transcript;
+            handleSpeechResult(transcript);
+          } else {
+            interim += event.results[i][0].transcript;
+          }
+        }
+        if (interim) {
+          setInterimTranscript(interim);
+        }
+      };
+
+      rec.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        if (event.error === 'not-allowed') {
+          setListeningError('マイクの使用許可が拒否されました。設定をご確認ください。');
+        } else if (event.error === 'no-speech') {
+          setListeningError('音声が検出されませんでした。もう一度お話しください。');
+        } else {
+          setListeningError(`エラーが発生しました: ${event.error}`);
+        }
+        setTimeout(() => {
+          setIsListening(false);
+        }, 2500);
+      };
+
+      rec.onend = () => {
+        setIsListening(false);
+      };
+
+      rec.start();
+      (window as any)._activeRecognition = rec;
+    } catch (e) {
+      console.error(e);
+      setListeningError('音声入力の起動に失敗しました。');
+      setIsListening(false);
+    }
+  };
+
+  const stopListening = () => {
+    if (typeof window !== 'undefined' && (window as any)._activeRecognition) {
+      try {
+        (window as any)._activeRecognition.stop();
+      } catch (e) {
+        console.error(e);
+      }
+      setIsListening(false);
+    }
   };
 
   const handleQuickTap = (ing: string) => {
@@ -141,13 +296,27 @@ export default function SuggestTab() {
       {/* Ingredient Inputs Card */}
       <div className="bg-slate-800/80 backdrop-blur-md rounded-2xl p-4 border border-slate-700/50 shadow-xl">
         <form onSubmit={handleTextSubmit} className="flex gap-2">
-          <input
-            type="text"
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            placeholder="例: 豚肉, キャベツ, 豆腐..."
-            className="flex-1 px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent text-sm transition-all"
-          />
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              placeholder="例: 豚肉, キャベツ, 豆腐..."
+              className={`w-full pl-4 ${isSpeechSupported ? 'pr-11' : 'pr-4'} py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent text-sm transition-all`}
+            />
+            {isSpeechSupported && (
+              <button
+                type="button"
+                onClick={startListening}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-amber-400 hover:bg-slate-800/80 active:scale-95 transition-all rounded-lg"
+                title="音声で食材を入力"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+              </button>
+            )}
+          </div>
           <button
             type="submit"
             className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold rounded-xl text-sm transition-all active:scale-95 shadow-lg shadow-amber-900/30"
@@ -315,6 +484,56 @@ export default function SuggestTab() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* 音声入力聞き取り中オーバーレイ */}
+      {isListening && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-md p-6">
+          <div className="bg-slate-900/95 border border-slate-800 rounded-3xl p-8 max-w-sm w-full flex flex-col items-center space-y-6 shadow-2xl text-center">
+            <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+              </span>
+              マイク聞き取り中...
+            </h3>
+            
+            {/* Pulsing Waveform Animation */}
+            <div className="relative flex items-center justify-center w-28 h-28">
+              <div className="absolute inset-0 rounded-full bg-amber-500/10 animate-ping" style={{ animationDuration: '3s' }}></div>
+              <div className="absolute inset-2 rounded-full bg-amber-500/20 animate-ping" style={{ animationDuration: '2s' }}></div>
+              <div className="absolute inset-4 rounded-full bg-amber-500/30 animate-pulse"></div>
+              <div className="z-10 w-16 h-16 rounded-full bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white shadow-lg shadow-amber-500/30">
+                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+              </div>
+            </div>
+
+            <div className="space-y-2 w-full">
+              <p className="text-sm font-semibold text-amber-300 min-h-[1.5rem] break-all">
+                {interimTranscript || 'お話ししてください...'}
+              </p>
+              <p className="text-xxs text-slate-400 leading-relaxed">
+                「豚肉とキャベツと豆腐」のように、食材の名前を「と」や「や」で繋げて話してください。
+              </p>
+            </div>
+
+            {listeningError && (
+              <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/25 px-3 py-2 rounded-xl w-full">
+                ⚠️ {listeningError}
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={stopListening}
+              className="px-6 py-2.5 bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-slate-600 text-slate-300 hover:text-white rounded-xl text-xs font-bold tracking-wider active:scale-95 transition-all w-full"
+            >
+              キャンセル
+            </button>
+          </div>
         </div>
       )}
     </div>
