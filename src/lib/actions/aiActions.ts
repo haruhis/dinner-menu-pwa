@@ -85,11 +85,19 @@ export async function generateMealLogServer(rawInput: string): Promise<string> {
 }
 
 /**
- * Analyzes an uploaded meal image and returns simulated food items using Gemini 1.5 Flash.
+ * Analyzes an uploaded meal image and returns simulated food items using Gemini 2.5 Flash.
  */
-export async function analyzeMealImageServer(imageBase64: string, mimeType: string): Promise<string> {
-  // Remove data URL prefix if present
-  const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "");
+export async function analyzeMealImageServer(formData: FormData): Promise<string> {
+  const file = formData.get("image") as File;
+  if (!file) {
+    throw new Error("画像ファイルが見つかりません。");
+  }
+
+  // Convert File to Base64 safely on the server side to bypass React RSC serialization constraints
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  const base64Data = buffer.toString("base64");
+  const mimeType = file.type;
 
   const systemPrompt = `この画像に写っている食事メニューを極めて正確に分析し、写っている料理名や代表的な食材名を簡潔なカンマ区切りの日本語文字列（例：ジューシー唐揚げ定食、キャベツの千切り、お味噌汁、ご飯）で出力してください。
 料理名や食材名以外の説明、前置き、分析理由、余計な記号、挨拶などは一切含めず、カンマ区切りのプレーンテキストのみを返してください。`;

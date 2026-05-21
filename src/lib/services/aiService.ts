@@ -514,16 +514,12 @@ ${comments.join(" ")}
    * Analyzes an uploaded meal image (Real Gemini with graceful Mock Fallback).
    */
   analyzeMealImage: async (imageFile: File): Promise<string> => {
-    // 1. Try real Gemini Multimodal API on Server Side (convert file to base64 first)
+    // 1. Try real Gemini Multimodal API on Server Side (use FormData to prevent RSC serialization nesting limits)
     try {
-      const base64Data = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(imageFile);
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = error => reject(error);
-      });
+      const formData = new FormData();
+      formData.append("image", imageFile);
 
-      const result = await analyzeMealImageServer(base64Data, imageFile.type);
+      const result = await analyzeMealImageServer(formData);
       return result;
     } catch (e) {
       console.warn("Fallback to Mock AI for analyzeMealImage due to error:", e);
