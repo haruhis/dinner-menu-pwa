@@ -506,5 +506,25 @@ ${comments.join(" ")}
       fishCount,
       logCount
     };
+  },
+
+  /**
+   * Analyzes an uploaded meal image and returns simulated food items.
+   */
+  analyzeMealImage: async (imageFile: File): Promise<string> => {
+    await delay(1500); // Simulate visual AI scan latency
+
+    const meals = [
+      "ジューシー唐揚げ定食、キャベツの千切り、お味噌汁、ご飯",
+      "サーモンのムニエル、ブロッコリーのソテー、コーンスープ、ライス",
+      "大盛り豚の生姜焼き、千切りキャベツ、豆腐とワカメのお味噌汁、ご飯",
+      "具だくさん冷やし中華、冷奴、わかめスープ",
+      "旨辛麻婆豆腐定食、中華スープ、ご飯"
+    ];
+
+    // Pick a random high-fidelity meal description
+    const selectedMeal = meals[Math.floor(Math.random() * meals.length)];
+    return selectedMeal;
   }
 };
+

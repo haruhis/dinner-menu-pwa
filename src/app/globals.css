@@ -96,3 +96,15 @@ body {
 .border-slate-750 {
   border-color: #33415550;
 }
+
+/* Scanner Laser Scan Animation */
+@keyframes laser-scan {
+  0% { top: 0%; opacity: 0.3; }
+  50% { top: 100%; opacity: 1; }
+  100% { top: 0%; opacity: 0.3; }
+}
+
+.animate-laser {
+  animation: laser-scan 2.0s ease-in-out infinite;
+}
+

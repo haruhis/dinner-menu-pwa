@@ -20,11 +20,18 @@ export default function LogTab({ onLogSaved }: LogTabProps) {
   const [savedLogDate, setSavedLogDate] = useState('');
   const [mounted, setMounted] = useState(false);
 
+  // 写真入力関連のステート・参照
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
+
   // 音声入力関連のステート
   const [isSpeechSupported, setIsSpeechSupported] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [listeningError, setListeningError] = useState<string | null>(null);
   const [interimTranscript, setInterimTranscript] = useState('');
+
 
   // クライアントサイドでのみ音声入力をサポートしているか確認（SSRハイドレーション回避）
   React.useEffect(() => {
@@ -121,7 +128,41 @@ export default function LogTab({ onLogSaved }: LogTabProps) {
     }
   };
 
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImageFile(file);
+
+    // Create image preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    // Trigger scanner
+    setIsScanning(true);
+
+    try {
+      const analyzedText = await aiService.analyzeMealImage(file);
+      setInputText(prev => {
+        const trimmed = prev.trim();
+        return trimmed ? `${trimmed} ${analyzedText}` : analyzedText;
+      });
+    } catch (err) {
+      console.error("Image analysis failed:", err);
+    } finally {
+      setIsScanning(false);
+      // Clear file input value so same file can be selected again if needed
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   const handleGenerate = async (e: React.FormEvent) => {
+
     e.preventDefault();
     if (!inputText.trim()) return;
 
@@ -230,20 +271,72 @@ export default function LogTab({ onLogSaved }: LogTabProps) {
               <label htmlFor="meal-input" className="block text-xs font-bold text-emerald-400">
                 🍽️ 食べたものや感想を入力してください:
               </label>
-              {isSpeechSupported && (
+              <div className="flex items-center gap-1.5">
+                {isSpeechSupported && (
+                  <button
+                    type="button"
+                    onClick={startListening}
+                    className="flex items-center gap-1 text-xxs font-extrabold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg active:scale-95 transition-all shadow-sm"
+                    title="音声で入力"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                    </svg>
+                    <span>音声入力</span>
+                  </button>
+                )}
+                
                 <button
                   type="button"
-                  onClick={startListening}
+                  onClick={() => fileInputRef.current?.click()}
                   className="flex items-center gap-1 text-xxs font-extrabold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg active:scale-95 transition-all shadow-sm"
-                  title="音声で入力"
+                  title="写真から解析"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  <span>音声入力</span>
+                  <span>写真解析</span>
                 </button>
-              )}
+                
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/*"
+                  onChange={handlePhotoChange}
+                  className="hidden"
+                />
+              </div>
             </div>
+
+            {/* 解析完了した写真プレビュー */}
+            {imagePreview && (
+              <div className="relative flex items-center gap-3 bg-slate-900/95 border border-emerald-500/30 rounded-xl p-2.5 shadow-lg transition-all animate-fade-in mb-2 mt-1">
+                <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-slate-700/60 flex-shrink-0">
+                  <img src={imagePreview} alt="Meal preview" className="w-full h-full object-cover" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xxs font-extrabold mb-0.5">
+                    📸 AI解析完了
+                  </span>
+                  <p className="text-slate-500 text-xxs truncate">アップロードされた食事写真</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImageFile(null);
+                    setImagePreview(null);
+                  }}
+                  className="w-6 h-6 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-all active:scale-90 flex-shrink-0"
+                  title="画像を削除"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            )}
+
             <textarea
               id="meal-input"
               rows={5}
@@ -428,6 +521,65 @@ export default function LogTab({ onLogSaved }: LogTabProps) {
           </div>
         </div>
       )}
+
+      {/* AI画像解析中スキャンオーバーレイ */}
+      {isScanning && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-md p-6">
+          <div className="bg-slate-900/95 border border-slate-800 rounded-3xl p-8 max-w-sm w-full flex flex-col items-center space-y-6 shadow-2xl text-center animate-slide-up">
+            
+            <div className="space-y-1">
+              <h3 className="text-base font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-500">
+                🔍 AI食事画像解析中...
+              </h3>
+              <p className="text-xxs text-slate-400">
+                AIが画像からおかずの種類や栄養バランスを解析しています
+              </p>
+            </div>
+
+            {/* Scanning Polaroid Mock Container */}
+            <div className="relative w-48 h-48 rounded-2xl overflow-hidden border border-emerald-500/30 shadow-lg shadow-emerald-950/20 bg-slate-950 flex items-center justify-center">
+              {imagePreview ? (
+                <img src={imagePreview} alt="Scanning target" className="w-full h-full object-cover opacity-90" />
+              ) : (
+                <div className="text-slate-500 text-xs">読み込み中...</div>
+              )}
+
+              {/* Sci-Fi Scanning Laser Line Animation */}
+              <div className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_10px_#10b981] animate-laser"></div>
+              
+              {/* Futuristic scanning corners */}
+              <div className="absolute top-2 left-2 w-3.5 h-3.5 border-t-2 border-l-2 border-emerald-400/80"></div>
+              <div className="absolute top-2 right-2 w-3.5 h-3.5 border-t-2 border-r-2 border-emerald-400/80"></div>
+              <div className="absolute bottom-2 left-2 w-3.5 h-3.5 border-b-2 border-l-2 border-emerald-400/80"></div>
+              <div className="absolute bottom-2 right-2 w-3.5 h-3.5 border-b-2 border-r-2 border-emerald-400/80"></div>
+            </div>
+
+            <div className="flex flex-col items-center gap-1">
+              <div className="flex space-x-1.5 justify-center py-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '300ms' }}></span>
+              </div>
+              <p className="text-xxs text-emerald-400 font-bold tracking-wider animate-pulse">
+                ビジュアルスキャン実行中...
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsScanning(false);
+                setImageFile(null);
+                setImagePreview(null);
+              }}
+              className="px-6 py-2.5 bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-slate-600 text-slate-400 hover:text-white rounded-xl text-xs font-bold active:scale-95 transition-all w-full"
+            >
+              スキャンをキャンセル
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
