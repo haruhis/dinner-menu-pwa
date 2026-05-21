@@ -1,9 +1,10 @@
 import { MenuSuggestion, SuggestionParams, MealLog, DietaryAnalysis } from '../types';
+import { suggestMenusServer, generateMealLogServer, analyzeMealImageServer } from '../actions/aiActions';
 
-// Helper to simulate API call latency
+// Helper to simulate API call latency for mock fallback
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Pre-defined rich recipe catalog for intelligent matching
+// Pre-defined rich recipe catalog for intelligent matching (Mock Fallback)
 interface CatalogRecipe {
   title: string;
   description: string;
@@ -44,7 +45,7 @@ const RECIPE_CATALOG: CatalogRecipe[] = [
     description: "あっさりしながらも鶏肉のコクとキャベツの甘みが引き立つ、シンプルな炒め物です。",
     required: ["鶏肉", "キャベツ"],
     missingOptions: [
-      { ingredient: "にんにく", titleWithMissing: "鶏肉とキャベツのガーリック塩炒め", descWithMissing: "にんにくを一辺加えるだけで、スタミナ満点でパンチの効いた絶品おかずに変身します！" }
+      { ingredient: "にんにく", titleWithMissing: "鶏肉とキャベツ of ガーリック塩炒め", descWithMissing: "にんにくを一辺加えるだけで、スタミナ満点でパンチの効いた絶品おかずに変身します！" }
     ],
     steps: [
       "鶏肉はそぎ切りにし、キャベツは手でちぎる。",
@@ -67,7 +68,7 @@ const RECIPE_CATALOG: CatalogRecipe[] = [
   },
   {
     title: "豆腐とキャベツのとろみ煮",
-    description: "胃に優しくヘルシーな一品。キャベツの水分と豆腐のなめらかさが絶妙です。",
+    description: "胃に優しくヘルシーな一品。キャベツの水分と豆腐のなめらかさが目立って絶妙です。",
     required: ["豆腐", "キャベツ"],
     missingOptions: [
       { ingredient: "ひき肉", titleWithMissing: "ひき肉入り豆腐とキャベツの麻婆風とろみ煮", descWithMissing: "ひき肉のコクをプラスして少しピリ辛に仕上げることで、食べ応えのあるメインおかずになります。" }
@@ -183,12 +184,26 @@ const applyTrendRecommendation = (meal: MenuSuggestion, trend: DietaryAnalysis) 
 
 export const aiService = {
   /**
-   * Suggests menus based on ingredients.
+   * Suggests menus based on ingredients (Real Gemini with graceful Mock Fallback).
    */
   suggestMenus: async (params: SuggestionParams, trend?: DietaryAnalysis): Promise<MenuSuggestion[]> => {
-    await delay(900); // Simulate network/LLM latency
-
     const rawIngredients = params.ingredients.map(i => i.trim()).filter(i => i.length > 0);
+
+    // 1. Try real Gemini API on Server Side
+    try {
+      if (rawIngredients.length > 0) {
+        const geminiSuggestions = await suggestMenusServer(rawIngredients);
+        if (trend) {
+          geminiSuggestions.forEach(meal => applyTrendRecommendation(meal, trend));
+        }
+        return geminiSuggestions;
+      }
+    } catch (e) {
+      console.warn("Fallback to Mock AI for suggestMenus due to error:", e);
+    }
+
+    // 2. Mock Fallback
+    await delay(900); // Simulate network/LLM latency
 
     if (rawIngredients.length === 0) {
       // Return 3 random ones shuffled
@@ -208,7 +223,6 @@ export const aiService = {
 
     // Simple matching helper
     const matchesIngredient = (requiredItem: string, userList: string[]) => {
-      // Supports loose match (e.g. "豚肉" matches user entering "豚")
       return userList.some(userItem => 
         requiredItem.includes(userItem) || userItem.includes(requiredItem)
       );
@@ -220,14 +234,12 @@ export const aiService = {
       const totalRequired = recipe.required.length;
 
       if (matchCount === totalRequired) {
-        // Can make now!
         canMakeNow.push({
           title: recipe.title,
           description: recipe.description,
           steps: recipe.steps
         });
       } else if (matchCount === totalRequired - 1 && totalRequired > 1) {
-        // Missing exactly one required ingredient from catalog setup
         const missingReq = recipe.required.find(req => !matchesIngredient(req, userIngs));
         if (missingReq) {
           missingOne.push({
@@ -239,7 +251,6 @@ export const aiService = {
         }
       }
 
-      // Also check explicit "missingOptions" configs in our catalog for extra flavor
       for (const opt of recipe.missingOptions) {
         const hasAllRequired = recipe.required.every(req => matchesIngredient(req, userIngs));
         const userHasOpt = matchesIngredient(opt.ingredient, userIngs);
@@ -256,8 +267,6 @@ export const aiService = {
     }
 
     // Dynamic Generator Fallback:
-    // If the user enters ingredients that don't match any pre-defined recipe,
-    // let's dynamically compose beautiful recipes so it feels like a real LLM is thinking!
     if (canMakeNow.length === 0 && rawIngredients.length > 0) {
       const mainIng = rawIngredients[0];
       const subIngStr = rawIngredients.slice(1).join("と") || "常備菜";
@@ -314,7 +323,6 @@ export const aiService = {
       });
     }
 
-    // Apply recommendations based on diet trend
     if (trend) {
       canMakeNow.forEach(meal => applyTrendRecommendation(meal, trend));
       missingOne.forEach(meal => applyTrendRecommendation(meal, trend));
@@ -323,7 +331,6 @@ export const aiService = {
     const finalCanMake = canMakeNow.sort(() => 0.5 - Math.random()).slice(0, 2);
     const finalMissing = missingOne.sort(() => 0.5 - Math.random()).slice(0, 2);
 
-    // Prioritize recommended ones to be first in their arrays
     if (trend) {
       finalCanMake.sort((a, b) => (b.isDietitianRecommended ? -1 : 0) - (a.isDietitianRecommended ? -1 : 0));
       finalMissing.sort((a, b) => (b.isDietitianRecommended ? -1 : 0) - (a.isDietitianRecommended ? -1 : 0));
@@ -333,33 +340,38 @@ export const aiService = {
   },
 
   /**
-   * Generates a beautifully formatted Markdown meal log from today's dinner raw text input.
+   * Generates a beautifully formatted Markdown meal log from today's dinner raw text input (Real Gemini with graceful Mock Fallback).
    */
   generateMealLog: async (rawInput: string): Promise<string> => {
-    await delay(1200); // Simulate AI generation/reasoning latency
-
     if (!rawInput || rawInput.trim().length === 0) {
       return "入力された内容が空です。夕食の内容を入力してください。";
     }
 
+    // 1. Try real Gemini API on Server Side
+    try {
+      const geminiLog = await generateMealLogServer(rawInput);
+      return geminiLog;
+    } catch (e) {
+      console.warn("Fallback to Mock AI for generateMealLog due to error:", e);
+    }
+
+    // 2. Mock Fallback
+    await delay(1200); // Simulate AI generation/reasoning latency
+
     const today = new Date();
     const formattedDate = `${today.getFullYear()}年${String(today.getMonth() + 1).padStart(2, '0')}月${String(today.getDate()).padStart(2, '0')}日`;
 
-    // Simple natural language parsing of input to extract items
-    // Split by commas, spaces, Japanese punctuations, etc.
     const items = rawInput
       .split(/[,，、\s\+\-\/\n・]+/)
       .map(item => item.trim())
       .filter(item => item.length > 0 && !["おいしかった", "美味しい", "お腹いっぱい", "最高", "満足", "食べた", "つかれた", "食べた！", "美味しかった！", "美味しかった", "完食"].includes(item));
 
-    // Categorized items
     let mainDish = "";
     const sideDishes: string[] = [];
     let soup = "";
     let rice = "";
     const comments: string[] = [];
 
-    // Analyze feelings or description
     if (rawInput.includes("美味") || rawInput.includes("おいし")) {
       comments.push("とても美味しく仕上がりました！");
     }
@@ -373,15 +385,11 @@ export const aiService = {
       comments.push("満足度の高いお食事でした。");
     }
 
-    // Classify each input item based on keywords
     items.forEach((item) => {
       const lowerItem = item.toLowerCase();
-      
-      // 1. Soup classification
       if (lowerItem.includes("汁") || lowerItem.includes("スープ") || lowerItem.includes("吸い物") || lowerItem.includes("ポタージュ") || lowerItem.includes("とん汁")) {
         soup = item;
       }
-      // 2. Rice/Carb/Staple classification
       else if (
         lowerItem.includes("米") || 
         lowerItem.includes("ご飯") || 
@@ -395,31 +403,25 @@ export const aiService = {
       ) {
         rice = item;
       }
-      // 3. Main vs Side dish classification
       else {
-        // If we don't have a main dish yet, classify the first non-rice/non-soup as main
         if (!mainDish) {
           mainDish = item;
         } else {
-          // Others are side dishes
           sideDishes.push(item);
         }
       }
     });
 
-    // Fallback: If everything entered was somehow skipped, set main
     if (!mainDish && items.length > 0) {
       mainDish = items[0];
     }
 
-    // Build the "本日の献立" list dynamically
     let dishesMd = "";
     if (mainDish) dishesMd += `- **主菜**: ${mainDish}\n`;
     if (sideDishes.length > 0) dishesMd += `- **副菜**: ${sideDishes.join("、")}\n`;
     if (soup) dishesMd += `- **汁物**: ${soup}\n`;
     if (rice) dishesMd += `- **主食**: ${rice}\n`;
 
-    // Generate nutritional checks based on words
     const lowerInput = rawInput.toLowerCase();
     const hasProtein = /肉|豚|鶏|牛|豆腐|大豆|卵|魚|サバ|鮭|ツナ|チーズ|納豆|ささみ|ステーキ/.test(lowerInput);
     const hasVegetable = /キャベツ|トマト|サラダ|野菜|ねぎ|ネギ|玉ねぎ|タマネギ|大根|ピーマン|ナス|きゅうり|レタス|ほうれん草|小松菜|もやし/.test(lowerInput);
@@ -447,10 +449,10 @@ ${comments.join(" ")}
   },
 
   /**
-   * Analyzes recent meal logs to determine dietary trends (meat-heavy, veggie-deficient, etc.).
+   * Analyzes recent meal logs to determine dietary trends.
    */
   analyzeDietaryTrend: (logs: MealLog[]): DietaryAnalysis => {
-    const recentLogs = logs.slice(0, 7); // Analyze the 7 most recent entries
+    const recentLogs = logs.slice(0, 7);
     const logCount = recentLogs.length;
 
     let meatCount = 0;
@@ -509,9 +511,25 @@ ${comments.join(" ")}
   },
 
   /**
-   * Analyzes an uploaded meal image and returns simulated food items.
+   * Analyzes an uploaded meal image (Real Gemini with graceful Mock Fallback).
    */
   analyzeMealImage: async (imageFile: File): Promise<string> => {
+    // 1. Try real Gemini Multimodal API on Server Side (convert file to base64 first)
+    try {
+      const base64Data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(imageFile);
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = error => reject(error);
+      });
+
+      const result = await analyzeMealImageServer(base64Data, imageFile.type);
+      return result;
+    } catch (e) {
+      console.warn("Fallback to Mock AI for analyzeMealImage due to error:", e);
+    }
+
+    // 2. Mock Fallback
     await delay(1500); // Simulate visual AI scan latency
 
     const meals = [
@@ -522,9 +540,7 @@ ${comments.join(" ")}
       "旨辛麻婆豆腐定食、中華スープ、ご飯"
     ];
 
-    // Pick a random high-fidelity meal description
     const selectedMeal = meals[Math.floor(Math.random() * meals.length)];
     return selectedMeal;
   }
 };
-
