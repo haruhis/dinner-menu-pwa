@@ -4,6 +4,63 @@ import { suggestMenusServer, generateMealLogServer, analyzeMealImageServer } fro
 // Helper to simulate API call latency for mock fallback
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * Helper to compress and resize images client-side before uploading.
+ * Resizes the image to a maximum dimension of 1024px and encodes as a medium-quality JPEG (0.7).
+ */
+const compressImage = async (file: File): Promise<Blob> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+        const maxDimension = 1024;
+
+        if (width > height) {
+          if (width > maxDimension) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          }
+        } else {
+          if (height > maxDimension) {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(file); // fallback to original
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(blob);
+            } else {
+              resolve(file); // fallback
+            }
+          },
+          "image/jpeg",
+          0.7 // 70% quality jpeg is perfectly visible for Gemini yet extremely compact
+        );
+      };
+      img.onerror = (err) => reject(err);
+    };
+    reader.onerror = (err) => reject(err);
+  });
+};
+
+
 // Pre-defined rich recipe catalog for intelligent matching (Mock Fallback)
 interface CatalogRecipe {
   title: string;
@@ -516,8 +573,17 @@ ${comments.join(" ")}
   analyzeMealImage: async (imageFile: File): Promise<string> => {
     // 1. Try real Gemini Multimodal API on Server Side (use FormData to prevent RSC serialization nesting limits)
     try {
+      // Compress and resize client-side to easily fit within Vercel 4.5MB payload and 10s Serverless timeout
+      let compressedBlob: Blob = imageFile;
+      try {
+        compressedBlob = await compressImage(imageFile);
+      } catch (compressErr) {
+        console.warn("Client-side image compression failed, sending original:", compressErr);
+      }
+
       const formData = new FormData();
-      formData.append("image", imageFile);
+      // Retain standard filename and append the compressed blob (standardized as a JPEG for extreme light weight)
+      formData.append("image", compressedBlob, "meal.jpg");
 
       const result = await analyzeMealImageServer(formData);
       return result;
