@@ -1,0 +1,430 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { aiService } from '../lib/services/aiService';
+import { databaseService } from '../lib/services/databaseService';
+import { MenuSuggestion, DietaryAnalysis } from '../lib/types';
+
+const QUICK_INGREDIENTS = ['豚肉', '鶏肉', 'キャベツ', '豆腐', '卵', 'トマト', '玉ねぎ', '魚'];
+
+export default function SuggestTab() {
+  const [inputText, setInputText] = useState('');
+  const [ingredients, setIngredients] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<MenuSuggestion[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [dietaryTrend, setDietaryTrend] = useState<DietaryAnalysis | null>(null);
+
+  // Fetch initial suggestions (empty = random) on mount
+  useEffect(() => {
+    fetchSuggestions([]);
+  }, []);
+
+  const fetchSuggestions = async (ings: string[]) => {
+    setLoading(true);
+    setExpandedIndex(null);
+    try {
+      const logs = await databaseService.getLogs();
+      const trend = aiService.analyzeDietaryTrend(logs);
+      setDietaryTrend(trend);
+
+      const results = await aiService.suggestMenus({ ingredients: ings }, trend);
+      setSuggestions(results);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddIngredient = (ing: string) => {
+    const trimmed = ing.trim();
+    if (!trimmed) return;
+    if (ingredients.includes(trimmed)) return;
+    const newIngs = [...ingredients, trimmed];
+    setIngredients(newIngs);
+    fetchSuggestions(newIngs);
+  };
+
+  const handleRemoveIngredient = (ing: string) => {
+    const newIngs = ingredients.filter(i => i !== ing);
+    setIngredients(newIngs);
+    fetchSuggestions(newIngs);
+  };
+
+  const handleTextSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputText.trim()) return;
+    // Split by spaces, commas, or Japanese punctuation
+    const items = inputText
+      .split(/[,，、\s\+]+/)
+      .map(i => i.trim())
+      .filter(i => i.length > 0);
+
+    const updatedIngs = [...ingredients];
+    items.forEach(item => {
+      if (!updatedIngs.includes(item)) {
+        updatedIngs.push(item);
+      }
+    });
+
+    setIngredients(updatedIngs);
+    setInputText('');
+    fetchSuggestions(updatedIngs);
+  };
+
+  const handleQuickTap = (ing: string) => {
+    if (ingredients.includes(ing)) {
+      handleRemoveIngredient(ing);
+    } else {
+      handleAddIngredient(ing);
+    }
+  };
+
+  const handleReload = () => {
+    fetchSuggestions(ingredients);
+  };
+
+  const clearAll = () => {
+    setIngredients([]);
+    fetchSuggestions([]);
+  };
+
+  // Group recipes into "can make now" vs "needs buying 1 item"
+  const canMakeNowRecipes = suggestions.filter(r => !r.missingIngredient);
+  const needBuyingRecipes = suggestions.filter(r => !!r.missingIngredient);
+
+  return (
+    <div className="space-y-6 pb-20 animate-fade-in">
+      {/* Header section */}
+      <div className="text-center pt-2">
+        <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">
+          🍳 今日の晩ごはん提案
+        </h1>
+        <p className="text-slate-400 text-xs mt-1">
+          冷蔵庫にある材料を入れるだけで、AIがぴったりな献立を提案します。
+        </p>
+      </div>
+
+      {/* AI Dietitian Advice Banner */}
+      {dietaryTrend && (
+        <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-4 shadow-lg space-y-2 animate-fade-in">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-black tracking-wider text-emerald-400 flex items-center gap-1">
+              <span>🩺</span> AI栄養士の食生活分析
+            </span>
+            {dietaryTrend.trend !== 'insufficient_data' && (
+              <span className={`px-2 py-0.5 rounded-full text-xxs font-bold ${
+                dietaryTrend.trend === 'balanced' 
+                  ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-300'
+                  : 'bg-amber-500/15 border border-amber-500/30 text-amber-300'
+              }`}>
+                {dietaryTrend.trend === 'balanced' && '🟢 栄養バランス良好'}
+                {dietaryTrend.trend === 'veg_deficient' && '🟡 お野菜不足気味'}
+                {dietaryTrend.trend === 'meat_heavy' && '🥩 お肉料理多め'}
+              </span>
+            )}
+          </div>
+          <p className="text-slate-350 text-xs leading-relaxed">
+            {dietaryTrend.advice}
+          </p>
+          {dietaryTrend.trend !== 'insufficient_data' && (
+            <div className="flex gap-4 pt-1.5 text-xxs text-slate-500 font-medium border-t border-slate-850/30">
+              <span>🥩 お肉: {dietaryTrend.meatCount}回 / 直近7回</span>
+              <span>🥗 野菜: {dietaryTrend.vegCount}回 / 直近7回</span>
+              <span>🐟 お魚: {dietaryTrend.fishCount}回 / 直近7回</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Ingredient Inputs Card */}
+      <div className="bg-slate-800/80 backdrop-blur-md rounded-2xl p-4 border border-slate-700/50 shadow-xl">
+        <form onSubmit={handleTextSubmit} className="flex gap-2">
+          <input
+            type="text"
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            placeholder="例: 豚肉, キャベツ, 豆腐..."
+            className="flex-1 px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent text-sm transition-all"
+          />
+          <button
+            type="submit"
+            className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold rounded-xl text-sm transition-all active:scale-95 shadow-lg shadow-amber-900/30"
+          >
+            追加
+          </button>
+        </form>
+
+        {/* Quick select tags */}
+        <div className="mt-3">
+          <p className="text-slate-400 text-xs mb-2 font-medium">人気の食材をタップで追加:</p>
+          <div className="flex flex-wrap gap-1.5">
+            {QUICK_INGREDIENTS.map(ing => {
+              const isSelected = ingredients.includes(ing);
+              return (
+                <button
+                  key={ing}
+                  type="button"
+                  onClick={() => handleQuickTap(ing)}
+                  className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-all duration-200 ${
+                    isSelected
+                      ? 'bg-amber-500 text-slate-900 border-amber-400 shadow-md shadow-amber-500/20'
+                      : 'bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-700'
+                  }`}
+                >
+                  {ing} {isSelected ? '✓' : '+'}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Selected ingredients tag list */}
+        {ingredients.length > 0 && (
+          <div className="mt-4 pt-3 border-t border-slate-750">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-amber-400 font-bold">現在の食材:</span>
+              <button
+                type="button"
+                onClick={clearAll}
+                className="text-xxs text-slate-500 hover:text-slate-300 transition-colors"
+              >
+                すべてクリア
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {ingredients.map(ing => (
+                <span
+                  key={ing}
+                  className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-amber-950/40 border border-amber-900 text-amber-300 text-xs font-medium"
+                >
+                  {ing}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveIngredient(ing)}
+                    className="hover:text-white transition-colors"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Suggestion List Header */}
+      <div className="flex items-center justify-between px-1">
+        <span className="text-sm font-bold text-slate-300">
+          {ingredients.length > 0 ? `食材から見つかった献立 (${suggestions.length})` : 'おすすめの夕食献立 (ランダム)'}
+        </span>
+        <button
+          onClick={handleReload}
+          disabled={loading}
+          className="flex items-center gap-1 text-xs text-amber-400 hover:text-amber-300 active:scale-95 transition-all font-semibold"
+        >
+          <svg
+            className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H17m0 0V3m0 5h4"
+            />
+          </svg>
+          {loading ? '提案中...' : '別案を出す'}
+        </button>
+      </div>
+
+      {/* Loading state */}
+      {loading ? (
+        <div className="bg-slate-800/40 rounded-2xl p-12 border border-slate-700/30 flex flex-col items-center justify-center space-y-4">
+          <div className="relative">
+            {/* Spinning Plate/Dish SVG */}
+            <svg className="w-16 h-16 text-amber-500 animate-spin" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="4" strokeDasharray="30 20" />
+              <path d="M50 15 L50 25 M50 75 L50 85 M15 50 L25 50 M75 50 L85 50" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
+            </svg>
+            <span className="absolute inset-0 flex items-center justify-center text-xl">🍳</span>
+          </div>
+          <p className="text-slate-300 font-semibold text-sm animate-pulse text-center">
+            {ingredients.length > 0
+              ? '冷蔵庫の材料を組み合わせています...'
+              : '本日のスペシャル献立を選定中...'}
+          </p>
+          <span className="text-slate-500 text-xxs text-center">AIの創作アイデアを読み込んでいます</span>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* Group 1: Can make now */}
+          {ingredients.length > 0 && canMakeNowRecipes.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-xs font-bold text-emerald-400 tracking-wider uppercase px-1">
+                🟢 今ある材料で作れるもの
+              </h3>
+              <div className="space-y-3">
+                {canMakeNowRecipes.map((recipe, idx) => (
+                  <RecipeCard
+                    key={recipe.title}
+                    recipe={recipe}
+                    isExpanded={expandedIndex === idx}
+                    onToggle={() => setExpandedIndex(expandedIndex === idx ? null : idx)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Group 2: Needs buying 1 ingredient */}
+          {ingredients.length > 0 && needBuyingRecipes.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-xs font-bold text-amber-400 tracking-wider uppercase px-1">
+                🛒 あと1つ買えば作れるもの
+              </h3>
+              <div className="space-y-3">
+                {needBuyingRecipes.map((recipe, idx) => {
+                  const globalIdx = canMakeNowRecipes.length + idx;
+                  return (
+                    <RecipeCard
+                      key={recipe.title}
+                      recipe={recipe}
+                      isExpanded={expandedIndex === globalIdx}
+                      onToggle={() => setExpandedIndex(expandedIndex === globalIdx ? null : globalIdx)}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Fallback for empty screen suggestions */}
+          {ingredients.length === 0 && (
+            <div className="space-y-3">
+              {suggestions.map((recipe, idx) => (
+                <RecipeCard
+                  key={recipe.title}
+                  recipe={recipe}
+                  isExpanded={expandedIndex === idx}
+                  onToggle={() => setExpandedIndex(expandedIndex === idx ? null : idx)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Sub-component: Recipe Card with Expand/Accordion
+interface RecipeCardProps {
+  recipe: MenuSuggestion;
+  isExpanded: boolean;
+  onToggle: () => void;
+}
+
+function RecipeCard({ recipe, isExpanded, onToggle }: RecipeCardProps) {
+  return (
+    <div
+      onClick={onToggle}
+      className={`bg-slate-800 rounded-2xl border transition-all duration-300 overflow-hidden cursor-pointer ${
+        isExpanded
+          ? 'border-amber-500/50 shadow-lg shadow-amber-950/10'
+          : 'border-slate-700/50 hover:border-slate-650 hover:scale-[1.01]'
+      }`}
+    >
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-2">
+          <div className="space-y-1">
+            <h4 className="font-extrabold text-slate-100 text-sm sm:text-base transition-colors duration-200 group-hover:text-amber-400 flex flex-wrap items-center gap-1.5">
+              <span>{recipe.title}</span>
+              {recipe.isDietitianRecommended && (
+                <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/35 text-emerald-400 text-xxs font-extrabold tracking-wide animate-pulse">
+                  ⭐ AIおすすめ
+                </span>
+              )}
+            </h4>
+            <p className="text-slate-400 text-xs line-clamp-2 leading-relaxed">
+              {recipe.description}
+            </p>
+          </div>
+          
+          {/* Missing ingredient badge */}
+          {recipe.missingIngredient ? (
+            <span className="flex-shrink-0 px-2 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xxs font-extrabold flex items-center gap-0.5 animate-pulse">
+              <span>+</span>
+              <span>{recipe.missingIngredient}</span>
+            </span>
+          ) : (
+            /* Standard "Complete" badge for ingredient matches */
+            recipe.description.includes('今ある') && (
+              <span className="flex-shrink-0 px-2 py-1 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xxs font-bold">
+                即席OK
+              </span>
+            )
+          )}
+        </div>
+
+        {/* Expand indicator chevron */}
+        <div className="flex justify-center mt-2">
+          <svg
+            className={`w-4 h-4 text-slate-500 transition-transform duration-300 ${
+              isExpanded ? 'rotate-180 text-amber-400' : ''
+            }`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </div>
+
+      {/* Expanded Accordion Area (Steps) */}
+      <div
+        className={`transition-all duration-300 ease-in-out bg-slate-900/60 border-t border-slate-750/30 ${
+          isExpanded ? 'max-h-[800px] p-4 opacity-100' : 'max-h-0 opacity-0 pointer-events-none'
+        }`}
+        onClick={(e) => e.stopPropagation()} // Stop closing parent
+      >
+        {recipe.isDietitianRecommended && (
+          <div className="mb-4 p-2.5 rounded-xl bg-emerald-500/5 border border-emerald-500/15 text-xxs text-emerald-300 leading-normal flex items-start gap-1.5">
+            <span>🩺</span>
+            <span>
+              <strong>栄養アドバイス:</strong> {recipe.dietitianLabel}
+            </span>
+          </div>
+        )}
+
+        <h5 className="text-xs font-extrabold text-amber-400 mb-3 flex items-center gap-1">
+          <span>📖</span> つくりかた (主な工程)
+        </h5>
+        
+        <ol className="space-y-3">
+          {recipe.steps.map((step, index) => (
+            <li key={index} className="flex gap-2.5 items-start text-xs text-slate-300 leading-relaxed">
+              <span className="w-4 h-4 rounded-full bg-slate-800 text-amber-500 border border-slate-700 flex items-center justify-center font-bold text-xxs flex-shrink-0 mt-0.5">
+                {index + 1}
+              </span>
+              <span className="flex-1">{step}</span>
+            </li>
+          ))}
+        </ol>
+
+        {recipe.missingIngredient && (
+          <div className="mt-4 p-2.5 rounded-xl bg-amber-500/5 border border-amber-500/10 text-xxs text-amber-300/90 leading-normal flex items-start gap-1.5">
+            <span>💡</span>
+            <span>
+              買い出しメモに <strong>{recipe.missingIngredient}</strong> を追加して、さっそくお買い物へ出かけましょう！
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

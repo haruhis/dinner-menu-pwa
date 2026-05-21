@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+    <linearGradient id="plateGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#f1f5f9" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#78350f" flood-opacity="0.3" />
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="512" height="512" rx="128" fill="url(#bgGrad)" />
+  
+  <!-- Content Group with Shadow -->
+  <g filter="url(#shadow)">
+    <!-- Plate -->
+    <circle cx="256" cy="270" r="140" fill="url(#plateGrad)" />
+    <circle cx="256" cy="270" r="110" fill="none" stroke="#e2e8f0" stroke-width="6" />
+    
+    <!-- Steam Lines -->
+    <path d="M226 90 Q236 105 226 120 T226 150" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" opacity="0.9" />
+    <path d="M256 80 Q266 100 256 120 T256 150" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" opacity="0.9" />
+    <path d="M286 90 Q296 105 286 120 T286 150" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" opacity="0.9" />
+    
+    <!-- Fork -->
+    <g transform="translate(70, 0)">
+      <!-- Handle -->
+      <rect x="36" y="240" width="12" height="140" rx="6" fill="#cbd5e1" />
+      <!-- Head Base -->
+      <path d="M22 200 L62 200 L56 240 L28 240 Z" fill="#cbd5e1" />
+      <!-- Prongs -->
+      <rect x="22" y="150" width="6" height="50" rx="3" fill="#94a3b8" />
+      <rect x="34" y="150" width="6" height="50" rx="3" fill="#94a3b8" />
+      <rect x="46" y="150" width="6" height="50" rx="3" fill="#94a3b8" />
+      <rect x="58" y="150" width="6" height="50" rx="3" fill="#94a3b8" />
+    </g>
+
+    <!-- Spoon -->
+    <g transform="translate(320, 0)">
+      <!-- Handle -->
+      <rect x="36" y="240" width="12" height="140" rx="6" fill="#cbd5e1" />
+      <!-- Spoon Head -->
+      <ellipse cx="42" cy="185" rx="26" ry="40" fill="#cbd5e1" />
+      <ellipse cx="38" cy="180" rx="18" ry="30" fill="#f1f5f9" opacity="0.6" />
+    </g>
+    
+    <!-- Cloche/Food Cover Silhouette on plate (subtle) -->
+    <path d="M210 270 A46 46 0 0 1 302 270 Z" fill="#f59e0b" opacity="0.15" />
+  </g>
+</svg>
