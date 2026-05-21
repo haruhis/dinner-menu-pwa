@@ -22,9 +22,11 @@ export default function LogTab({ onLogSaved }: LogTabProps) {
 
   // 写真入力関連のステート・参照
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const cameraInputRef = React.useRef<HTMLInputElement>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [showImageSourceModal, setShowImageSourceModal] = useState(false);
 
   // 音声入力関連のステート
   const [isSpeechSupported, setIsSpeechSupported] = useState(false);
@@ -154,9 +156,12 @@ export default function LogTab({ onLogSaved }: LogTabProps) {
       console.error("Image analysis failed:", err);
     } finally {
       setIsScanning(false);
-      // Clear file input value so same file can be selected again if needed
+      // Clear file input values so same file can be selected again if needed
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
+      }
+      if (cameraInputRef.current) {
+        cameraInputRef.current.value = '';
       }
     }
   };
@@ -288,7 +293,7 @@ export default function LogTab({ onLogSaved }: LogTabProps) {
                 
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => setShowImageSourceModal(true)}
                   className="flex items-center gap-1 text-xxs font-extrabold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg active:scale-95 transition-all shadow-sm"
                   title="写真から解析"
                 >
@@ -299,10 +304,21 @@ export default function LogTab({ onLogSaved }: LogTabProps) {
                   <span>写真解析</span>
                 </button>
                 
+                {/* カメラ撮影専用インプット (背面カメラ直起動) */}
+                <input
+                  type="file"
+                  ref={cameraInputRef}
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handlePhotoChange}
+                  className="hidden"
+                />
+                
+                {/* ギャラリー・ファイル選択専用インプット (MIMEタイプ指定でカメラ強制起動を防止) */}
                 <input
                   type="file"
                   ref={fileInputRef}
-                  accept="image/*"
+                  accept="image/png, image/jpeg, image/webp"
                   onChange={handlePhotoChange}
                   className="hidden"
                 />
@@ -575,6 +591,61 @@ export default function LogTab({ onLogSaved }: LogTabProps) {
               className="px-6 py-2.5 bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-slate-600 text-slate-400 hover:text-white rounded-xl text-xs font-bold active:scale-95 transition-all w-full"
             >
               スキャンをキャンセル
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 写真選択ソース決定ダイアログ */}
+      {showImageSourceModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-slate-900/95 border border-slate-800 rounded-2xl p-6 max-w-xs w-full flex flex-col space-y-4 shadow-2xl text-center animate-scale-up">
+            <div>
+              <h3 className="text-sm font-extrabold text-slate-100 flex items-center justify-center gap-1.5">
+                <span>📷</span> 写真の追加方法を選択
+              </h3>
+              <p className="text-xxs text-slate-400 mt-1">
+                夕食の写真を追加する方法を選んでください。
+              </p>
+            </div>
+            
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowImageSourceModal(false);
+                  cameraInputRef.current?.click();
+                }}
+                className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 hover:from-emerald-500/35 hover:to-teal-500/35 border border-emerald-500/30 text-emerald-300 font-extrabold rounded-xl text-xs tracking-wider active:scale-95 transition-all shadow-md shadow-emerald-950/20"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span>カメラを起動して撮影</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowImageSourceModal(false);
+                  fileInputRef.current?.click();
+                }}
+                className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-slate-600 text-slate-200 font-extrabold rounded-xl text-xs tracking-wider active:scale-95 transition-all shadow-md"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span>ライブラリ・ファイルから選択</span>
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowImageSourceModal(false)}
+              className="text-xxs text-slate-400 hover:text-slate-350 font-bold py-1 bg-transparent hover:bg-slate-800/20 active:scale-95 transition-all rounded-lg"
+            >
+              キャンセル
             </button>
           </div>
         </div>

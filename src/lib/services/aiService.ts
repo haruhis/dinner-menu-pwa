@@ -369,7 +369,7 @@ export const aiService = {
     if (rawInput.includes("疲") || rawInput.includes("しんど")) {
       comments.push("疲れた体に栄養がしっかり染み渡りました。");
     }
-    if (comments.length === 0) {
+    if (rawInput.includes("満足") || rawInput.includes("お腹いっぱい") || rawInput.includes("満腹") || rawInput.includes("最高")) {
       comments.push("満足度の高いお食事でした。");
     }
 
