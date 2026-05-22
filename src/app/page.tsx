@@ -4,12 +4,14 @@ import React, { useState } from 'react';
 import SuggestTab from '../components/SuggestTab';
 import LogTab from '../components/LogTab';
 import CalendarTab from '../components/CalendarTab';
+import ManualModal from '../components/ManualModal';
 
 type TabType = 'suggest' | 'log' | 'calendar';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<TabType>('suggest');
   const [calendarRefreshTrigger, setCalendarRefreshTrigger] = useState(0);
+  const [isManualOpen, setIsManualOpen] = useState(false);
 
   // Trigger calendar update
   const handleLogSaved = () => {
@@ -33,11 +35,22 @@ export default function Home() {
           </span>
         </div>
         
-        {/* Subtle Online Badge */}
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xxs font-bold">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-          MVP Active
-        </span>
+        <div className="flex items-center gap-2">
+          {/* Subtle Online Badge */}
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-bold">
+            <span className="w-1.2 h-1.2 rounded-full bg-emerald-400 animate-pulse"></span>
+            MVP
+          </span>
+
+          {/* 📖 使い方ボタン */}
+          <button 
+            onClick={() => setIsManualOpen(true)}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800/60 hover:bg-slate-750 text-slate-200 text-xxs font-bold transition-all border border-slate-700/50 active:scale-95 shadow-sm"
+          >
+            <span>📖</span>
+            <span>ガイド</span>
+          </button>
+        </div>
       </header>
 
       {/* Main Tab Content View Container */}
@@ -122,6 +135,14 @@ export default function Home() {
           
         </div>
       </nav>
+
+      {/* Manual Modal Overlay */}
+      {isManualOpen && (
+        <ManualModal 
+          onClose={() => setIsManualOpen(false)} 
+          onDataImported={() => setCalendarRefreshTrigger(prev => prev + 1)}
+        />
+      )}
     </main>
   );
 }

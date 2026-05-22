@@ -1,36 +1,85 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🍽️ AI夕食お助け栄養士 - Dinner Menu PWA
 
-## Getting Started
+毎日の「今日の夕飯、どうしよう…」をパッと解決する、最先端AI（Gemini 2.5 Flash）を搭載した無料の夕食献立提案＆食事ログ管理アプリです。
+PWA（Progressive Web App）に対応しており、App StoreやGoogle Playを通さずに、スマートフォンに「本物のアプリ」として追加して今すぐ使えます。
 
-First, run the development server:
+---
 
+## 🌟 主な機能とAIの実力
+
+最新のマルチモーダルAI **Gemini 2.5 Flash** と連携し、以下の機能がすべてリアルタイム・高精度で動作します。
+
+### 1. 📸 パシャッと食事画像解析
+夕食の写真をカメラで撮影、またはアルバムからアップロードするだけで、AIが画像内の料理（例：「ジューシー唐揚げ定食、キャベツの千切り、お味噌汁、ご飯」など）を瞬時に、かつ極めて正確に認識します。
+* **軽量・爆速設計:** アップロード前にブラウザ側で画像を自動圧縮して送信するため、ギガを消費せず、一瞬で解析が完了します。
+
+### 2. 📝 AI管理栄養士の食事ログ
+食べたメニューのメモや写真から、綺麗な食事ログ（Markdown形式）を自動生成します。
+* **温かいAIアドバイス:** 食事内容やあなたの「美味しかった！」「疲れた…」といった感情に寄り添う、温かいAI栄養士コメントが届きます。
+* **📊 栄養バランス3段階評価:** 「タンパク質」「野菜・ビタミン」「炭水化物」のバランスをAIが🟢/🟡で判定し、具体的な改善ポイントをアドバイスします。
+
+### 3. 💡 残り物から魔法のレシピ提案
+冷蔵庫にある余った食材を選択（または手入力）するだけで、プロの料理研究家さながらのレシピを動的に提案します。
+* **即席メニュー:** 今ある材料ですぐ作れるものをAIが考案。
+* **あと1つ買い足しメニュー:** 「玉ねぎをあと1つだけ買い足せばできる、激ウマおかず」など、お買い物に役立つ提案も行います。
+* **AI栄養士のバッジ連動:** 過去の食事ログの傾向（最近お野菜が足りない、お肉が続いているなど）を分析し、それに合わせたおすすめメニューに「不足しがちな野菜を補給！」「お肉お休み・ヘルシー！」などの管理栄養士推薦バッジが自動付与されます。
+
+---
+
+## 📲 スマートフォンへのインストール方法（PWA）
+
+このアプリは **PWA（Progressive Web App）** です。App Store等に行かなくても、ブラウザからホーム画面に追加するだけで、通知やオフライン対応を含めた通常のアプリと同じ感覚で利用できます。もちろん無料・広告なしです！
+
+### 🍎 iPhone / iPad (Safari) の場合
+1. 公開されているアプリのURL（例: VercelのURL）を **Safariブラウザ** で開きます。
+2. 画面下部にある **「共有」アイコン（四角から上矢印が出ているマーク）** をタップします。
+3. メニューを下にスクロールし、**「ホーム画面に追加」** をタップします。
+4. 右上の **「追加」** をタップすると、ホーム画面にアプリのアイコンが出現します！
+
+### 🤖 Android (Chrome) の場合
+1. アプリのURLを **Google Chromeブラウザ** で開きます。
+2. 画面右上にある **「3点リーダー（縦の点々）」** または画面下部に表示されるポップアップをタップします。
+3. **「アプリをインストール」** または **「ホーム画面に追加」** をタップします。
+4. 画面の指示に従ってインストールを許可すると、ホーム画面にアイコンが出現します！
+
+---
+
+## 🔒 安心・安全なセキュア設計
+
+一般公開やお知り合いへ配布するにあたって、セキュリティとプライバシーは万全です。
+
+* **個人情報の完全保護 (完全ローカル保存):**
+  入力した食事ログや冷蔵庫の食材データは、すべてユーザー自身のスマートフォン（ブラウザの LocalStorage）にのみ保存されます。サーバー側に送信・収集されたり、会員登録を求められたりすることは一切ありません。アプリを消去すればデータも完全に消去されます。
+* **APIキーの秘匿化:**
+  最も重要なGoogle GeminiのAPIキーは、サーバーサイド（Next.js Server Actionsプロキシ）で厳重に管理されており、ユーザーのスマートフォン側（ブラウザ側）へ流出することは100%ありません。
+* **鉄壁のフォールバック機能:**
+  万が一、AIの無料アクセス枠の上限に達したり通信エラーが発生した場合でも、アプリがフリーズしないよう、自動的に内蔵された「高精度疑似AI（モックロジック）」へシームレスに切り替わります。
+
+---
+
+## 🛠️ 開発者向けセットアップ
+
+ローカル環境で開発やデバッグを行う場合の手順です。
+
+### 1. 依存パッケージのインストール
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. 環境変数の設定
+プロジェクトルートに `.env.local` ファイルを作成し、Google AI Studioで取得したAPIキーを設定します。
+```env
+GEMINI_API_KEY=あなたのGemini_APIキー
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. 開発サーバーの起動
+```bash
+npm run dev
+```
+起動後、ブラウザで [http://localhost:3000](http://localhost:3000) にアクセスします。
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 4. 本番ビルドと検証
+```bash
+npm run build
+npm run start
+```
