@@ -88,7 +88,13 @@ export default function SuggestTab() {
       const trend = aiService.analyzeDietaryTrend(logs);
       setDietaryTrend(trend);
 
-      const results = await aiService.suggestMenus({ ingredients: ings }, trend);
+      // 直近3日間の食事内容（生メモ）を抽出
+      const recentMeals = logs
+        .slice(0, 3)
+        .map(log => log.rawInput)
+        .filter(Boolean);
+
+      const results = await aiService.suggestMenus({ ingredients: ings, recentMeals }, trend);
       setSuggestions(results);
     } catch (e) {
       console.error(e);

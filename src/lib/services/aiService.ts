@@ -245,11 +245,12 @@ export const aiService = {
    */
   suggestMenus: async (params: SuggestionParams, trend?: DietaryAnalysis): Promise<MenuSuggestion[]> => {
     const rawIngredients = params.ingredients.map(i => i.trim()).filter(i => i.length > 0);
+    const recentMeals = params.recentMeals || [];
 
     // 1. Try real Gemini API on Server Side
     try {
       if (rawIngredients.length > 0) {
-        const geminiSuggestions = await suggestMenusServer(rawIngredients);
+        const geminiSuggestions = await suggestMenusServer(rawIngredients, recentMeals);
         if (trend) {
           geminiSuggestions.forEach(meal => applyTrendRecommendation(meal, trend));
         }

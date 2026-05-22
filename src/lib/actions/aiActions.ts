@@ -138,10 +138,18 @@ export async function analyzeMealImageServer(formData: FormData): Promise<string
 /**
  * Dynamic menu suggestions based on user ingredients using Gemini 1.5 Flash.
  */
-export async function suggestMenusServer(ingredients: string[]): Promise<MenuSuggestion[]> {
+export async function suggestMenusServer(ingredients: string[], recentMeals?: string[]): Promise<MenuSuggestion[]> {
   const ingredientsStr = ingredients.join("、");
+  const recentMealsStr = recentMeals && recentMeals.length > 0
+    ? `\nユーザーの直近の食事内容（これと被らないような異なる味付けを考慮してください）:\n${recentMeals.map((m, i) => `- ${m}`).join("\n")}\n`
+    : "";
+
   const systemPrompt = `あなたはプロの料理研究家兼管理栄養士です。ユーザーが指定した冷蔵庫の残り食材「${ingredientsStr}」を活かした美味しい夕食の献立を提案してください。
 以下のJSONフォーマット（配列形式）で、合計3〜4件のレシピを提案してください。
+${recentMealsStr}
+【超重要：味付けの重複を避けるルール】
+${recentMeals && recentMeals.length > 0 ? `ユーザーの直近の食事内容を考慮し、それらの料理の主要な味付け（例：醤油ベースの甘辛、塩味、味噌など）を分析してください。
+ユーザーが食事の味付けに飽きないよう、直近と重複しない異なる味付けジャンル（例：ケチャップ・トマト味、カレー・スパイシー系、洋風クリーム、酸味の効いたさっぱり塩レモン、中華風ピリ辛など）のバリエーション豊かなメニューを優先的に組み立てて提案してください。` : `バリエーション豊かな味付け（醤油ベース of 甘辛、塩味、味噌、トマトケチャップ、カレーなど）のメニューをバランスよく提案してください。`}
 
 提案の条件：
 1. 「今ある材料で作れるもの（即席OK）」を2件。

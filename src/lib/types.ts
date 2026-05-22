@@ -9,6 +9,7 @@ export interface MenuSuggestion {
 
 export interface SuggestionParams {
   ingredients: string[];
+  recentMeals?: string[]; // 直近の食事ログ
 }
 
 export interface MealLog {
