@@ -12,14 +12,47 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<TabType>('suggest');
   const [calendarRefreshTrigger, setCalendarRefreshTrigger] = useState(0);
   const [isManualOpen, setIsManualOpen] = useState(false);
+  const [logTargetDate, setLogTargetDate] = useState<string | undefined>(undefined);
+
+  // Global Calendar state so the selection doesn't reset when switching tabs
+  const [calendarSelectedDateStr, setCalendarSelectedDateStr] = useState<string>(() => {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  });
+  const [calendarCurrentDate, setCalendarCurrentDate] = useState<Date>(() => new Date());
 
   // Trigger calendar update
-  const handleLogSaved = () => {
+  const handleLogSaved = (savedDate?: string) => {
     setCalendarRefreshTrigger(prev => prev + 1);
+    if (savedDate) {
+      setCalendarSelectedDateStr(savedDate);
+      
+      const parts = savedDate.split('-');
+      if (parts.length === 3) {
+        const y = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10) - 1;
+        const d = parseInt(parts[2], 10);
+        if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+          setCalendarCurrentDate(new Date(y, m, 1));
+        }
+      }
+    }
   };
 
   // Helper to switch tab
-  const handleNavigateToLog = () => {
+  const handleNavigateToLog = (date: string) => {
+    setLogTargetDate(date);
+    setCalendarSelectedDateStr(date);
+    
+    const parts = date.split('-');
+    if (parts.length === 3) {
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10) - 1;
+      const d = parseInt(parts[2], 10);
+      if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+        setCalendarCurrentDate(new Date(y, m, 1));
+      }
+    }
     setActiveTab('log');
   };
 
@@ -56,11 +89,20 @@ export default function Home() {
       {/* Main Tab Content View Container */}
       <section className="flex-1 px-5 py-4 overflow-y-auto pb-safe">
         {activeTab === 'suggest' && <SuggestTab />}
-        {activeTab === 'log' && <LogTab onLogSaved={handleLogSaved} />}
+        {activeTab === 'log' && (
+          <LogTab 
+            onLogSaved={handleLogSaved} 
+            initialDate={logTargetDate} 
+          />
+        )}
         {activeTab === 'calendar' && (
           <CalendarTab 
             onNavigateToLog={handleNavigateToLog} 
             refreshTrigger={calendarRefreshTrigger} 
+            selectedDateStr={calendarSelectedDateStr}
+            setSelectedDateStr={setCalendarSelectedDateStr}
+            currentDate={calendarCurrentDate}
+            setCurrentDate={setCalendarCurrentDate}
           />
         )}
       </section>
@@ -93,7 +135,10 @@ export default function Home() {
 
           {/* Tab 2: Log */}
           <button
-            onClick={() => setActiveTab('log')}
+            onClick={() => {
+              setLogTargetDate(undefined);
+              setActiveTab('log');
+            }}
             className={`flex flex-col items-center gap-1 transition-all duration-200 ${
               activeTab === 'log' 
                 ? 'text-emerald-400 scale-105 font-bold' 

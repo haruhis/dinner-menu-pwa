@@ -5,19 +5,25 @@ import { databaseService } from '../lib/services/databaseService';
 import { MealLog } from '../lib/types';
 
 interface CalendarTabProps {
-  onNavigateToLog: () => void; // Callback to switch active tab to "Log"
+  onNavigateToLog: (date: string) => void; // Callback to switch active tab to "Log" with a specific date
   refreshTrigger?: number;      // Used to trigger refetch when a log is saved
+  selectedDateStr: string;
+  setSelectedDateStr: (date: string) => void;
+  currentDate: Date;
+  setCurrentDate: (date: Date) => void;
 }
 
-export default function CalendarTab({ onNavigateToLog, refreshTrigger = 0 }: CalendarTabProps) {
+export default function CalendarTab({ 
+  onNavigateToLog, 
+  refreshTrigger = 0,
+  selectedDateStr,
+  setSelectedDateStr,
+  currentDate,
+  setCurrentDate
+}: CalendarTabProps) {
   const [logs, setLogs] = useState<MealLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [currentDate, setCurrentDate] = useState(() => new Date()); // Selected Month Anchor
-  const [selectedDateStr, setSelectedDateStr] = useState<string>(() => {
-    const today = new Date();
-    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-  });
   
   // Editing state
   const [isEditing, setIsEditing] = useState(false);
@@ -345,7 +351,7 @@ export default function CalendarTab({ onNavigateToLog, refreshTrigger = 0 }: Cal
               <p className="text-slate-550 text-xxs">お気に入りの手作りおかずや、今日食べたものを記録してみましょう。</p>
             </div>
             <button
-              onClick={onNavigateToLog}
+              onClick={() => onNavigateToLog(selectedDateStr)}
               className="px-4 py-2 bg-slate-900 border border-slate-700 text-indigo-400 hover:text-indigo-300 hover:border-slate-600 rounded-xl text-xs font-bold transition-all active:scale-95 shadow-md shadow-slate-950/20"
             >
               ✍️ この日の夕食を記録する

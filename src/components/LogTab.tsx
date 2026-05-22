@@ -5,14 +5,16 @@ import { aiService } from '../lib/services/aiService';
 import { databaseService } from '../lib/services/databaseService';
 
 interface LogTabProps {
-  onLogSaved?: () => void; // Callback to notify parent (so calendar can refresh)
+  onLogSaved?: (savedDate: string) => void; // Callback to notify parent (so calendar can refresh)
+  initialDate?: string;     // Option to specify pre-selected date from calendar
 }
 
-export default function LogTab({ onLogSaved }: LogTabProps) {
+export default function LogTab({ onLogSaved, initialDate }: LogTabProps) {
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
   const [generatedMarkdown, setGeneratedMarkdown] = useState('');
   const [selectedDate, setSelectedDate] = useState(() => {
+    if (initialDate) return initialDate;
     const today = new Date();
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   });
@@ -48,6 +50,13 @@ export default function LogTab({ onLogSaved }: LogTabProps) {
   React.useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Sync selectedDate when initialDate changes
+  React.useEffect(() => {
+    if (initialDate) {
+      setSelectedDate(initialDate);
+    }
+  }, [initialDate]);
 
   const handleSpeechResult = (transcript: string) => {
     if (!transcript.trim()) return;
@@ -206,7 +215,7 @@ export default function LogTab({ onLogSaved }: LogTabProps) {
       
       // Trigger parent calendar update if callback provided
       if (onLogSaved) {
-        onLogSaved();
+        onLogSaved(selectedDate);
       }
     } catch (e) {
       console.error('Error saving log', e);
