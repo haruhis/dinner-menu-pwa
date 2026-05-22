@@ -257,7 +257,7 @@ export default function SuggestTab() {
           🍳 今日の晩ごはん提案
         </h1>
         <p className="text-slate-400 text-xs mt-1">
-          冷蔵庫にある材料を入れるだけで、AIがぴったりな献立を提案します。
+          冷蔵庫にある材料を入れるだけで、ぴったりな献立を提案します。
         </p>
       </div>
 
@@ -266,7 +266,7 @@ export default function SuggestTab() {
         <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-4 shadow-lg space-y-2 animate-fade-in">
           <div className="flex items-center justify-between">
             <span className="text-xs font-black tracking-wider text-emerald-400 flex items-center gap-1">
-              <span>🩺</span> AI栄養士の食生活分析
+              <span>🩺</span> 食生活分析
             </span>
             {dietaryTrend.trend !== 'insufficient_data' && (
               <span className={`px-2 py-0.5 rounded-full text-xxs font-bold ${
@@ -564,7 +564,7 @@ function RecipeCard({ recipe, isExpanded, onToggle }: RecipeCardProps) {
               <span>{recipe.title}</span>
               {recipe.isDietitianRecommended && (
                 <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/35 text-emerald-400 text-xxs font-extrabold tracking-wide animate-pulse">
-                  ⭐ AIおすすめ
+                  ⭐ おすすめ
                 </span>
               )}
             </h4>

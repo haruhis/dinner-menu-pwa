@@ -225,7 +225,7 @@ export default function LogTab({ onLogSaved }: LogTabProps) {
             📝 食事ログ自動収集
           </h1>
           <p className="text-slate-400 text-xs mt-1">
-            今日の晩ごはんをメモするだけで、AIがキレイなMarkdownログを作成します。
+            今日の晩ごはんをメモするだけで、キレイなマークダウンログを作成します。
           </p>
         </div>
         <div className="bg-slate-800/80 backdrop-blur-md rounded-2xl p-8 border border-slate-700/50 shadow-xl flex items-center justify-center">
@@ -244,7 +244,7 @@ export default function LogTab({ onLogSaved }: LogTabProps) {
             📝 食事ログ自動収集
           </h1>
           <p className="text-slate-400 text-xs mt-1">
-            今日の晩ごはんをメモするだけで、AIがキレイなMarkdownログを作成します。
+            今日の晩ごはんをメモするだけで、キレイなマークダウンログを作成します。
           </p>
         </div>
       )}
@@ -272,16 +272,16 @@ export default function LogTab({ onLogSaved }: LogTabProps) {
       {!generatedMarkdown && !loading && (
         <div className="bg-slate-800/80 backdrop-blur-md rounded-2xl p-4 border border-slate-700/50 shadow-xl space-y-4 animate-fade-in">
           <form onSubmit={handleGenerate} className="space-y-3">
-            <div className="flex justify-between items-center mb-1">
+            <div className="flex flex-col gap-2 mb-1.5 sm:flex-row sm:justify-between sm:items-center">
               <label htmlFor="meal-input" className="block text-xs font-bold text-emerald-400">
                 🍽️ 食べたものや感想を入力してください:
               </label>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 self-end sm:self-auto flex-shrink-0">
                 {isSpeechSupported && (
                   <button
                     type="button"
                     onClick={startListening}
-                    className="flex items-center gap-1 text-xxs font-extrabold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg active:scale-95 transition-all shadow-sm"
+                    className="flex items-center gap-1 text-xxs font-extrabold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg active:scale-95 transition-all shadow-sm whitespace-nowrap flex-shrink-0"
                     title="音声で入力"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -294,7 +294,7 @@ export default function LogTab({ onLogSaved }: LogTabProps) {
                 <button
                   type="button"
                   onClick={() => setShowImageSourceModal(true)}
-                  className="flex items-center gap-1 text-xxs font-extrabold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg active:scale-95 transition-all shadow-sm"
+                  className="flex items-center gap-1 text-xxs font-extrabold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg active:scale-95 transition-all shadow-sm whitespace-nowrap flex-shrink-0"
                   title="写真から解析"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -333,7 +333,7 @@ export default function LogTab({ onLogSaved }: LogTabProps) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xxs font-extrabold mb-0.5">
-                    📸 AI解析完了
+                    📸 解析完了
                   </span>
                   <p className="text-slate-500 text-xxs truncate">アップロードされた食事写真</p>
                 </div>
@@ -379,7 +379,7 @@ export default function LogTab({ onLogSaved }: LogTabProps) {
                 className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:opacity-40 disabled:pointer-events-none text-white font-bold rounded-xl text-sm transition-all active:scale-95 shadow-lg shadow-emerald-900/30 flex items-center gap-1.5"
               >
                 <span>✨</span>
-                <span>AIログ生成</span>
+                <span>ログ生成</span>
               </button>
             </div>
           </form>
@@ -405,7 +405,7 @@ export default function LogTab({ onLogSaved }: LogTabProps) {
           {/* Panel Top bar */}
           <div className="bg-slate-900/80 px-4 py-3 border-b border-slate-700/50 flex justify-between items-center">
             <span className="text-xs font-bold text-emerald-400 flex items-center gap-1">
-              <span>📝</span> AI生成ログ プレビュー
+              <span>📝</span> 生成ログ プレビュー
             </span>
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xxs font-bold">
               📅 {selectedDate}
@@ -545,10 +545,10 @@ export default function LogTab({ onLogSaved }: LogTabProps) {
             
             <div className="space-y-1">
               <h3 className="text-base font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-500">
-                🔍 AI食事画像解析中...
+                🔍 食事画像解析中...
               </h3>
               <p className="text-xxs text-slate-400">
-                AIが画像からおかずの種類や栄養バランスを解析しています
+                画像からおかずの種類や栄養バランスを解析しています
               </p>
             </div>
 

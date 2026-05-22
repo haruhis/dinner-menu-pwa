@@ -386,7 +386,7 @@ export default function ManualModal({ onClose, onDataImported }: ManualModalProp
                 ご家族やご友人にこのアプリを紹介しよう！
               </p>
               <p className="text-xxs text-slate-450 max-w-xs">
-                紹介された人は、その場ですぐに写真を撮ってAI食事ログを楽しんだり、カレンダーを使うことができます。
+                紹介された人は、その場ですぐに写真を撮って食事ログを楽しんだり、カレンダーを使うことができます。
               </p>
 
               {/* QRコード表示エリア */}
