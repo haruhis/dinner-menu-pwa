@@ -399,14 +399,14 @@ export const aiService = {
   /**
    * Generates a beautifully formatted Markdown meal log from today's dinner raw text input (Real Gemini with graceful Mock Fallback).
    */
-  generateMealLog: async (rawInput: string): Promise<string> => {
+  generateMealLog: async (rawInput: string, customDate?: string): Promise<string> => {
     if (!rawInput || rawInput.trim().length === 0) {
       return "入力された内容が空です。夕食の内容を入力してください。";
     }
 
     // 1. Try real Gemini API on Server Side
     try {
-      const geminiLog = await generateMealLogServer(rawInput);
+      const geminiLog = await generateMealLogServer(rawInput, customDate);
       return geminiLog;
     } catch (e) {
       console.warn("Fallback to Mock AI for generateMealLog due to error:", e);
@@ -415,8 +415,14 @@ export const aiService = {
     // 2. Mock Fallback
     await delay(1200); // Simulate AI generation/reasoning latency
 
-    const today = new Date();
-    const formattedDate = `${today.getFullYear()}年${String(today.getMonth() + 1).padStart(2, '0')}月${String(today.getDate()).padStart(2, '0')}日`;
+    let formattedDate = "";
+    if (customDate && /^\d{4}-\d{2}-\d{2}$/.test(customDate)) {
+      const parts = customDate.split("-");
+      formattedDate = `${parts[0]}年${parts[1]}月${parts[2]}日`;
+    } else {
+      const today = new Date();
+      formattedDate = `${today.getFullYear()}年${String(today.getMonth() + 1).padStart(2, '0')}月${String(today.getDate()).padStart(2, '0')}日`;
+    }
 
     const items = rawInput
       .split(/[,，、\s\+\-\/\n・]+/)

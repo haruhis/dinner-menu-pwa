@@ -39,9 +39,15 @@ async function callGemini(contents: any[]): Promise<string> {
 /**
  * Generates a beautifully formatted Markdown meal log from raw text using Gemini 1.5 Flash.
  */
-export async function generateMealLogServer(rawInput: string): Promise<string> {
-  const today = new Date();
-  const formattedDate = `${today.getFullYear()}年${String(today.getMonth() + 1).padStart(2, '0')}月${String(today.getDate()).padStart(2, '0')}日`;
+export async function generateMealLogServer(rawInput: string, customDate?: string): Promise<string> {
+  let formattedDate = "";
+  if (customDate && /^\d{4}-\d{2}-\d{2}$/.test(customDate)) {
+    const parts = customDate.split("-");
+    formattedDate = `${parts[0]}年${parts[1]}月${parts[2]}日`;
+  } else {
+    const today = new Date();
+    formattedDate = `${today.getFullYear()}年${String(today.getMonth() + 1).padStart(2, '0')}月${String(today.getDate()).padStart(2, '0')}日`;
+  }
 
   const systemPrompt = `あなたは優秀なAI管理栄養士です。ユーザーが入力した今日の夕食のメモから、美しく整理された食事ログのMarkdownを出力してください。
 返却するテキストは、Markdown記法に基づいた以下の構成に厳格に従ってください。

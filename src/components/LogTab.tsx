@@ -176,7 +176,7 @@ export default function LogTab({ onLogSaved }: LogTabProps) {
     setShowSuccess(false);
 
     try {
-      const markdown = await aiService.generateMealLog(inputText);
+      const markdown = await aiService.generateMealLog(inputText, selectedDate);
       setGeneratedMarkdown(markdown);
     } catch (e) {
       console.error(e);
