@@ -527,7 +527,7 @@ ${commentText}
 
     recentLogs.forEach(log => {
       if (!log) return;
-      const text = ((log.rawInput || '') + " " + (log.markdown || '')).toLowerCase();
+      const text = (log.rawInput || '').toLowerCase();
       
       const hasMeat = /肉|豚|鶏|牛|ステーキ|ハンバーグ|カツ|から揚げ|チャーシュー|ウインナー|ソーセージ|ミート/.test(text);
       const hasVeg = /キャベツ|トマト|サラダ|野菜|ねぎ|ネギ|玉ねぎ|タマネギ|大根|ピーマン|ナス|きゅうり|レタス|ほうれん草|小松菜|もやし|人参|にんじん|ブロッコリー|きのこ|ゴボウ|ごぼう/.test(text);
