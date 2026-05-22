@@ -13,12 +13,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "夕食献立提案アプリ MVP",
+  title: "よるログ - 今日の夕食レシピ提案＆食事記録",
   description: "毎日の夕食の献立提案と食事ログ収集・カレンダー管理を行えるモバイル特化PWA",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    title: "夕食献立",
+    title: "よるログ",
     statusBarStyle: "black-translucent",
   },
   icons: {

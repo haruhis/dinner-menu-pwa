@@ -181,7 +181,7 @@ export default function ManualModal({ onClose, onDataImported }: ManualModalProp
           <div className="flex items-center gap-2">
             <span className="text-lg">📖</span>
             <h2 className="font-bold text-slate-100 tracking-wide text-sm md:text-base">
-              DISH LOG AI ご利用ガイド
+              よるログ ご利用ガイド
             </h2>
           </div>
           <button 
@@ -245,7 +245,7 @@ export default function ManualModal({ onClose, onDataImported }: ManualModalProp
           {activeTab === 'guide' && (
             <div className="space-y-4 animate-in fade-in duration-200">
               <p className="text-center font-semibold text-slate-200 mb-2">
-                🍳 DISH LOG AI は、毎日の夕食づくりのサポートと<br />
+                🍳 よるログ は、毎日の夕食づくりのサポートと<br />
                 食事の記録をスマートに行えるアプリです。
               </p>
 

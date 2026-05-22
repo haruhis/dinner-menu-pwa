@@ -1,6 +1,6 @@
 {
-  "name": "夕食献立提案アプリ MVP",
-  "short_name": "夕食献立",
+  "name": "よるログ - 今日の夕食レシピ提案＆食事記録",
+  "short_name": "よるログ",
   "description": "毎日の夕食の献立提案と食事ログ収集・カレンダー管理を行えるモバイル特化PWA",
   "start_url": "/",
   "display": "standalone",

@@ -30,8 +30,8 @@ export default function Home() {
       <header className="px-5 pt-safe pb-3 bg-slate-900/40 backdrop-blur-md sticky top-0 z-40 border-b border-slate-900/50 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-xl filter drop-shadow">🍳</span>
-          <span className="font-black text-sm tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-emerald-400 to-indigo-400">
-            DISH LOG AI
+          <span className="font-black text-base tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-emerald-400 to-indigo-400">
+            よるログ
           </span>
         </div>
         
