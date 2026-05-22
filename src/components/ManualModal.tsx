@@ -245,39 +245,41 @@ export default function ManualModal({ onClose, onDataImported }: ManualModalProp
           {activeTab === 'guide' && (
             <div className="space-y-4 animate-in fade-in duration-200">
               <p className="text-center font-semibold text-slate-200 mb-2">
-                🍳 DISH LOG AI は、最新AIを搭載した<br />
-                「夕食献立提案 ＆ 食事写真解析カレンダー」です。
+                🍳 DISH LOG AI は、毎日の夕食づくりのサポートと<br />
+                食事の記録をスマートに行えるアプリです。
               </p>
 
-              {/* 機能1 */}
+              {/* 機能1: レシピ提案 */}
               <div className="p-3.5 rounded-xl bg-slate-950/40 border border-slate-800/50">
                 <h3 className="font-extrabold text-amber-400 mb-1 flex items-center gap-1.5 text-xs">
-                  <span>📸</span> AI食事写真解析（料理写真スキャン）
+                  <span>💡</span> 夕食レシピの提案
                 </h3>
                 <p className="text-xxs leading-relaxed">
-                  食事ログ画面で、今日の夕食の写真を「カメラで撮影」するか「フォルダから選択」するだけ！
-                  最新AI **Gemini 2.5 Flash** が写真を高度に分析し、メニュー名・推定カロリー・栄養バランス・感想メモを一撃で自動記述・データ化します。
+                  提案画面で、冷蔵庫に残っている食材をテキストや音声入力で入力してボタンを押すだけ。
+                  何も入力しなくても何らかの提案をしますし、材料に一品足せば「こんなのも作れるよ」という提案もいたします。お買い物の参考にしてください。
+                  また、過去の食事履歴を分析し、飽きの来ないメニューを提案します。
                 </p>
               </div>
 
-              {/* 機能2 */}
+              {/* 機能2: 食事ログ */}
               <div className="p-3.5 rounded-xl bg-slate-950/40 border border-slate-800/50">
                 <h3 className="font-extrabold text-emerald-400 mb-1 flex items-center gap-1.5 text-xs">
-                  <span>💡</span> 残り食材からの夕食レシピ提案
+                  <span>📸</span> 食事ログの記録
                 </h3>
                 <p className="text-xxs leading-relaxed">
-                  提案画面で、冷蔵庫に残っている食材をテキスト（または便利な**音声入力**）で入力してボタンを押すだけ。
-                  過去の食事履歴（カレンダー）をAIが自動分析し、栄養の偏りを防ぐメニューや、余り物で作れる爆速レシピを3通り提案します。
+                  食事ログ画面では、写真、音声入力、テキスト入力に対応しています。
+                  今日の夕食の写真をアップロードすると料理を分析して、メニュー名やカロリー、栄養バランス、感想のメモを自動で記録します。
                 </p>
               </div>
 
-              {/* 機能3 */}
+              {/* 機能3: カレンダー */}
               <div className="p-3.5 rounded-xl bg-slate-950/40 border border-slate-800/50">
                 <h3 className="font-extrabold text-indigo-400 mb-1 flex items-center gap-1.5 text-xs">
                   <span>📅</span> 食事カレンダー
                 </h3>
                 <p className="text-xxs leading-relaxed">
-                  保存された食事ログは自動でカレンダー形式に整理され、日ごとの食事内容やAIのアドバイスをいつでもタップで振り返ることができます。
+                  保存された食事ログは自動でカレンダー形式に整理され、日ごとの食事内容やアドバイスをいつでもタップで振り返ることができます。
+                  記録した内容は、後から修正・編集することも可能です。
                 </p>
               </div>
             </div>
