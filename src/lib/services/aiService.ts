@@ -60,6 +60,48 @@ const compressImage = async (file: File): Promise<Blob> => {
   });
 };
 
+// Safe fallback recipes for personalization (Mock Fallback when everything is filtered out)
+const SAFE_FALLBACK_MEALS: MenuSuggestion[] = [
+  {
+    title: "シンプル旨塩チキンソテー",
+    description: "鶏肉を塩コショウとオリーブオイルだけでカリッと焼き上げた、シンプルで一番美味しいソテーです。素材本来の味が楽しめます。",
+    steps: [
+      "鶏もも肉またはむね肉の水分をキッチンペーパーでよく拭き取り、一口大に切る。",
+      "両面に塩、コショウを適量振り、手で軽く揉み込んでなじませる。",
+      "フライパンにオリーブオイルまたはサラダ油を中火で熱し、皮目からじっくり焼く。",
+      "皮目がパリッと黄金色になったらひっくり返し、弱火で中までしっかり火を通す。"
+    ]
+  },
+  {
+    title: "香ばし焼きおにぎりとあったか味噌汁",
+    description: "醤油の香ばしさがたまらない焼きおにぎりと、お豆腐だけのシンプルな味噌汁のセット。ほっこり落ち着く組み合わせです。",
+    steps: [
+      "温かいご飯に少々の塩を混ぜて、ぎゅっと固めにおにぎりを握る。",
+      "フライパンに薄くごま油を引き、おにぎりを並べて両面をじっくり焼く。",
+      "両面に焼き色がついたら、醤油とみりんを混ぜたタレをハケなどで塗り、サッと両面を焼いて香ばしく仕上げる。",
+      "だし汁にお豆腐を入れ、味噌を溶き入れて温かいお味噌汁を作る。"
+    ]
+  }
+];
+
+// Helper to check if text contains any disliked ingredients
+const containsDisliked = (text: string, disliked: string[]) => {
+  return disliked.some(d => {
+    const dLower = d.toLowerCase().trim();
+    if (!dLower) return false;
+    return text.toLowerCase().includes(dLower);
+  });
+};
+
+// Helper to check if a recipe is safe
+const isRecipeSafe = (recipe: { title: string; description: string; steps: string[]; required?: string[] }, disliked: string[]) => {
+  if (disliked.length === 0) return true;
+  if (containsDisliked(recipe.title, disliked)) return false;
+  if (containsDisliked(recipe.description, disliked)) return false;
+  if (recipe.steps.some(step => containsDisliked(step, disliked))) return false;
+  if (recipe.required && recipe.required.some(req => containsDisliked(req, disliked))) return false;
+  return true;
+};
 
 // Pre-defined rich recipe catalog for intelligent matching (Mock Fallback)
 interface CatalogRecipe {
@@ -244,13 +286,21 @@ export const aiService = {
    * Suggests menus based on ingredients (Real Gemini with graceful Mock Fallback).
    */
   suggestMenus: async (params: SuggestionParams, trend?: DietaryAnalysis): Promise<MenuSuggestion[]> => {
-    const rawIngredients = params.ingredients.map(i => i.trim()).filter(i => i.length > 0);
+    let rawIngredients = params.ingredients.map(i => i.trim()).filter(i => i.length > 0);
     const recentMeals = params.recentMeals || [];
+    const disliked = params.dislikedIngredients || [];
+
+    // ユーザー指定の材料から苦手・除外食材を除去する
+    if (disliked.length > 0) {
+      rawIngredients = rawIngredients.filter(ing => 
+        !disliked.some(d => ing.toLowerCase().includes(d.toLowerCase()) || d.toLowerCase().includes(ing.toLowerCase()))
+      );
+    }
 
     // 1. Try real Gemini API on Server Side
     try {
       if (rawIngredients.length > 0) {
-        const geminiSuggestions = await suggestMenusServer(rawIngredients, recentMeals);
+        const geminiSuggestions = await suggestMenusServer(rawIngredients, recentMeals, disliked);
         if (trend) {
           geminiSuggestions.forEach(meal => applyTrendRecommendation(meal, trend));
         }
@@ -264,8 +314,14 @@ export const aiService = {
     await delay(900); // Simulate network/LLM latency
 
     if (rawIngredients.length === 0) {
-      // Return 3 random ones shuffled
-      const shuffled = [...RANDOM_MEALS].sort(() => 0.5 - Math.random());
+      // Return 3 random safe ones shuffled
+      let safeRandom = RANDOM_MEALS.filter(meal => isRecipeSafe(meal, disliked));
+      if (safeRandom.length < 3) {
+        const safeFallbacks = SAFE_FALLBACK_MEALS.filter(meal => isRecipeSafe(meal, disliked));
+        safeRandom = [...safeRandom, ...safeFallbacks];
+      }
+
+      const shuffled = [...safeRandom].sort(() => 0.5 - Math.random());
       const selected = shuffled.slice(0, 3).map(meal => ({ ...meal }));
       if (trend) {
         selected.forEach(meal => applyTrendRecommendation(meal, trend));
@@ -288,6 +344,10 @@ export const aiService = {
 
     // Filter catalog
     for (const recipe of RECIPE_CATALOG) {
+      if (!isRecipeSafe(recipe, disliked)) {
+        continue;
+      }
+
       const matchCount = recipe.required.filter(req => matchesIngredient(req, userIngs)).length;
       const totalRequired = recipe.required.length;
 
@@ -300,26 +360,36 @@ export const aiService = {
       } else if (matchCount === totalRequired - 1 && totalRequired > 1) {
         const missingReq = recipe.required.find(req => !matchesIngredient(req, userIngs));
         if (missingReq) {
-          missingOne.push({
+          const item = {
             title: `${recipe.title} (要: ${missingReq}追加)`,
             description: `${recipe.description} ※「${missingReq}」を買い足すことで、この絶品メニューが完成します！`,
             missingIngredient: missingReq,
             steps: recipe.steps
-          });
+          };
+          if (isRecipeSafe(item, disliked)) {
+            missingOne.push(item);
+          }
         }
       }
 
       for (const opt of recipe.missingOptions) {
+        if (containsDisliked(opt.ingredient, disliked)) {
+          continue;
+        }
+
         const hasAllRequired = recipe.required.every(req => matchesIngredient(req, userIngs));
         const userHasOpt = matchesIngredient(opt.ingredient, userIngs);
 
         if (hasAllRequired && !userHasOpt) {
-          missingOne.push({
+          const item = {
             title: opt.titleWithMissing,
             description: opt.descWithMissing,
             missingIngredient: opt.ingredient,
             steps: recipe.steps
-          });
+          };
+          if (isRecipeSafe(item, disliked)) {
+            missingOne.push(item);
+          }
         }
       }
     }
@@ -329,7 +399,7 @@ export const aiService = {
       const mainIng = rawIngredients[0];
       const subIngStr = rawIngredients.slice(1).join("と") || "常備菜";
       
-      canMakeNow.push({
+      const item1 = {
         title: `${mainIng}の極上特製炒め`,
         description: `今ある新鮮な${mainIng}${rawIngredients.length > 1 ? `と${subIngStr}` : ''}の風味を最大限に活かした、特製の簡単和風炒め物です。醤油とみりんの香ばしい香りが立ち上ります。`,
         steps: [
@@ -337,10 +407,13 @@ export const aiService = {
           "フライパンにごごま油を熱し、香りが立ったら食材を中火〜強火で素早く炒めます。",
           "全体に火が通ったら、醤油大さじ1、みりん大さじ1、酒大さじ1、砂糖少々を加え、タレを絡めるように炒め上げます。"
         ]
-      });
+      };
+      if (isRecipeSafe(item1, disliked)) {
+        canMakeNow.push(item1);
+      }
 
       if (rawIngredients.length === 1) {
-        canMakeNow.push({
+        const item2 = {
           title: `${mainIng}たっぷり和風雑炊`,
           description: `冷えた体に染み渡る、優しい${mainIng}の出汁スープをベースにしたほかほか雑炊です。`,
           steps: [
@@ -348,10 +421,13 @@ export const aiService = {
             `細かくカットした${mainIng}と、水洗いしてヌメリを取ったご飯1杯分を加え、弱火で5分煮込みます。`,
             "仕上げにお好みで塩で味を整え、溶き卵やお好みの薬味を回し入れます。"
           ]
-        });
+        };
+        if (isRecipeSafe(item2, disliked)) {
+          canMakeNow.push(item2);
+        }
       } else {
         const secondIng = rawIngredients[1];
-        canMakeNow.push({
+        const item3 = {
           title: `${mainIng}と${secondIng}の味わい健康スープ`,
           description: `素材本来の自然な甘みと旨味をギュッと閉じ込めた、栄養たっぷりの温かいコンソメ風スープです。`,
           steps: [
@@ -359,26 +435,41 @@ export const aiService = {
             "鍋に水400mlとコンソメスープの素1個を入れ、カットした具材を入れ煮立てます。",
             "具材が柔らかくなるまで弱火で10分ほど煮込み、仕上げに塩コショウで味を調えます。"
           ]
-        });
+        };
+        if (isRecipeSafe(item3, disliked)) {
+          canMakeNow.push(item3);
+        }
       }
     }
 
     if (missingOne.length === 0 && rawIngredients.length > 0) {
       const mainIng = rawIngredients[0];
       const commonAdditions = ["とろけるチーズ", "シャキシャキ玉ねぎ", "新鮮な完熟トマト", "ふんわり卵"];
-      const randomAdd = commonAdditions[Math.floor(Math.random() * commonAdditions.length)];
-      const missingName = randomAdd.replace(/(とろける|シャキシャキ|新鮮な|ふんわり)/, "").trim();
+      const safeAdditions = commonAdditions.filter(add => !containsDisliked(add, disliked));
 
-      missingOne.push({
-        title: `${mainIng}と${randomAdd}の黄金チーズ焼き`,
-        description: `今の${mainIng}に「${missingName}」をあと1つだけ買い足すことで、とろ〜り絶品のオーブン焼きが作れます。おもてなしにもピッタリ！`,
-        missingIngredient: missingName,
-        steps: [
-          `${mainIng}はあらかじめソテーするか茹でておきます。`,
-          `耐熱皿に具材を並べ、買い足した${missingName}をたっぷりとのせます。`,
-          "オーブントースターまたはグリルで、表面に香ばしい焼き色がつくまで5〜8分焼き上げます。"
-        ]
-      });
+      if (safeAdditions.length > 0) {
+        const randomAdd = safeAdditions[Math.floor(Math.random() * safeAdditions.length)];
+        const missingName = randomAdd.replace(/(とろける|シャキシャキ|新鮮な|ふんわり)/, "").trim();
+
+        const item = {
+          title: `${mainIng}と${randomAdd}の黄金チーズ焼き`,
+          description: `今の${mainIng}に「${missingName}」をあと1つだけ買い足すことで、とろ〜り絶品のオーブン焼きが作れます。おもてなしにもピッタリ！`,
+          missingIngredient: missingName,
+          steps: [
+            `${mainIng}はあらかじめソテーするか茹でておきます。`,
+            `耐熱皿に具材を並べ、買い足した${missingName}をたっぷりとのせます。`,
+            "オーブントースターまたはグリルで、表面に香ばしい焼き色がつくまで5〜8分焼き上げます。"
+          ]
+        };
+        if (isRecipeSafe(item, disliked)) {
+          missingOne.push(item);
+        }
+      }
+    }
+
+    if (canMakeNow.length === 0 && missingOne.length === 0) {
+      const safeFallbacks = SAFE_FALLBACK_MEALS.filter(meal => isRecipeSafe(meal, disliked));
+      canMakeNow.push(...safeFallbacks);
     }
 
     if (trend) {

@@ -59,6 +59,12 @@ export default function SuggestTab() {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [dietaryTrend, setDietaryTrend] = useState<DietaryAnalysis | null>(null);
 
+  // 苦手・除外食材関連のステート
+  const [dislikedIngredients, setDislikedIngredients] = useState<string[]>([]);
+  const [showPersonalization, setShowPersonalization] = useState(false);
+  const [dislikedInput, setDislikedInput] = useState('');
+  const [isLoaded, setIsLoaded] = useState(false);
+
   // 音声入力関連のステート
   const [isSpeechSupported, setIsSpeechSupported] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -75,12 +81,30 @@ export default function SuggestTab() {
     }
   }, []);
 
-  // Fetch initial suggestions (empty = random) on mount
+  // Load disliked ingredients from localStorage on mount
   useEffect(() => {
-    fetchSuggestions([]);
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('dinner-menu-pwa-disliked-ingredients');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored) as string[];
+          setDislikedIngredients(parsed);
+        } catch (e) {
+          console.error('Failed to parse disliked ingredients from localStorage', e);
+        }
+      }
+    }
+    setIsLoaded(true);
   }, []);
 
-  const fetchSuggestions = async (ings: string[]) => {
+  // Fetch initial suggestions after loading state
+  useEffect(() => {
+    if (isLoaded) {
+      fetchSuggestions(ingredients, dislikedIngredients);
+    }
+  }, [isLoaded]);
+
+  const fetchSuggestions = async (ings: string[], disliked?: string[]) => {
     setLoading(true);
     setExpandedIndex(null);
     try {
@@ -94,7 +118,13 @@ export default function SuggestTab() {
         .map(log => log.rawInput)
         .filter(Boolean);
 
-      const results = await aiService.suggestMenus({ ingredients: ings, recentMeals }, trend);
+      const targetDisliked = disliked !== undefined ? disliked : dislikedIngredients;
+
+      const results = await aiService.suggestMenus({ 
+        ingredients: ings, 
+        recentMeals,
+        dislikedIngredients: targetDisliked 
+      }, trend);
       setSuggestions(results);
     } catch (e) {
       console.error(e);
@@ -106,16 +136,17 @@ export default function SuggestTab() {
   const handleAddIngredient = (ing: string) => {
     const trimmed = ing.trim();
     if (!trimmed) return;
+    if (dislikedIngredients.includes(trimmed)) return;
     if (ingredients.includes(trimmed)) return;
     const newIngs = [...ingredients, trimmed];
     setIngredients(newIngs);
-    fetchSuggestions(newIngs);
+    fetchSuggestions(newIngs, dislikedIngredients);
   };
 
   const handleRemoveIngredient = (ing: string) => {
     const newIngs = ingredients.filter(i => i !== ing);
     setIngredients(newIngs);
-    fetchSuggestions(newIngs);
+    fetchSuggestions(newIngs, dislikedIngredients);
   };
 
   const handleTextSubmit = (e: React.FormEvent) => {
@@ -129,6 +160,7 @@ export default function SuggestTab() {
 
     const updatedIngs = [...ingredients];
     items.forEach(item => {
+      if (dislikedIngredients.includes(item)) return;
       if (!updatedIngs.includes(item)) {
         updatedIngs.push(item);
       }
@@ -136,7 +168,7 @@ export default function SuggestTab() {
 
     setIngredients(updatedIngs);
     setInputText('');
-    fetchSuggestions(updatedIngs);
+    fetchSuggestions(updatedIngs, dislikedIngredients);
   };
 
   const handleSpeechResult = (transcript: string) => {
@@ -149,6 +181,7 @@ export default function SuggestTab() {
     let addedAny = false;
 
     parsed.forEach(item => {
+      if (dislikedIngredients.includes(item)) return;
       if (!updatedIngs.includes(item)) {
         updatedIngs.push(item);
         addedAny = true;
@@ -157,7 +190,7 @@ export default function SuggestTab() {
 
     if (addedAny) {
       setIngredients(updatedIngs);
-      fetchSuggestions(updatedIngs);
+      fetchSuggestions(updatedIngs, dislikedIngredients);
     }
   };
 
@@ -243,12 +276,37 @@ export default function SuggestTab() {
   };
 
   const handleReload = () => {
-    fetchSuggestions(ingredients);
+    fetchSuggestions(ingredients, dislikedIngredients);
   };
 
   const clearAll = () => {
     setIngredients([]);
-    fetchSuggestions([]);
+    fetchSuggestions([], dislikedIngredients);
+  };
+
+  const handleAddDisliked = (ing: string) => {
+    const trimmed = ing.trim();
+    if (!trimmed) return;
+    if (dislikedIngredients.includes(trimmed)) return;
+    
+    // もし現在の冷蔵庫の食材に入っていたら、そこから除外する
+    const updatedIngredients = ingredients.filter(i => i !== trimmed);
+    if (updatedIngredients.length !== ingredients.length) {
+      setIngredients(updatedIngredients);
+    }
+
+    const next = [...dislikedIngredients, trimmed];
+    setDislikedIngredients(next);
+    localStorage.setItem('dinner-menu-pwa-disliked-ingredients', JSON.stringify(next));
+    setDislikedInput('');
+    fetchSuggestions(updatedIngredients, next);
+  };
+
+  const handleRemoveDisliked = (ing: string) => {
+    const next = dislikedIngredients.filter(i => i !== ing);
+    setDislikedIngredients(next);
+    localStorage.setItem('dinner-menu-pwa-disliked-ingredients', JSON.stringify(next));
+    fetchSuggestions(ingredients, next);
   };
 
   // Group recipes into "can make now" vs "needs buying 1 item"
@@ -387,6 +445,85 @@ export default function SuggestTab() {
             </div>
           </div>
         )}
+
+        {/* ⚙️ 苦手・除外食材の設定アコーディオン */}
+        <div className="mt-4 pt-3 border-t border-slate-700/50">
+          <button
+            type="button"
+            onClick={() => setShowPersonalization(!showPersonalization)}
+            className="flex items-center justify-between w-full text-xs font-bold text-slate-400 hover:text-slate-200 transition-colors"
+          >
+            <span className="flex items-center gap-1.5">
+              <span>⚙️</span> 苦手・除外食材の設定
+              {dislikedIngredients.length > 0 && (
+                <span className="px-1.5 py-0.5 rounded bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xxs font-extrabold">
+                  {dislikedIngredients.length}
+                </span>
+              )}
+            </span>
+            <svg
+              className={`w-3.5 h-3.5 text-slate-500 transition-transform duration-300 ${
+                showPersonalization ? 'rotate-180 text-rose-400' : ''
+              }`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {showPersonalization && (
+            <div className="mt-3 space-y-3 animate-fade-in">
+              <p className="text-xxs text-slate-400 leading-relaxed">
+                ここに登録された食材（アレルギーや苦手なもの）は、献立のタイトル・説明・手順から**100%除外**されます。
+              </p>
+              
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={dislikedInput}
+                  onChange={(e) => setDislikedInput(e.target.value)}
+                  placeholder="例: マヨネーズ, ブロッコリー..."
+                  className="flex-1 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-rose-500 focus:border-transparent text-xs transition-all"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddDisliked(dislikedInput);
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => handleAddDisliked(dislikedInput)}
+                  className="px-3 py-1.5 bg-rose-950/80 hover:bg-rose-900 border border-rose-800 hover:border-rose-700 text-rose-200 font-semibold rounded-lg text-xs transition-all active:scale-95 shadow-md shadow-rose-950/40"
+                >
+                  除外
+                </button>
+              </div>
+
+              {dislikedIngredients.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1.5">
+                  {dislikedIngredients.map(ing => (
+                    <span
+                      key={ing}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-rose-950/20 border border-rose-900/60 text-rose-300 text-xxs font-medium"
+                    >
+                      <span>🚫 {ing}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveDisliked(ing)}
+                        className="text-rose-400 hover:text-rose-200 transition-colors font-bold text-xs"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Suggestion List Header */}

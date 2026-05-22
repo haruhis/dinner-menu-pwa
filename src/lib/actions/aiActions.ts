@@ -138,11 +138,18 @@ export async function analyzeMealImageServer(formData: FormData): Promise<string
 /**
  * Dynamic menu suggestions based on user ingredients using Gemini 1.5 Flash.
  */
-export async function suggestMenusServer(ingredients: string[], recentMeals?: string[]): Promise<MenuSuggestion[]> {
+export async function suggestMenusServer(
+  ingredients: string[], 
+  recentMeals?: string[],
+  dislikedIngredients?: string[]
+): Promise<MenuSuggestion[]> {
   const ingredientsStr = ingredients.join("、");
   const recentMealsStr = recentMeals && recentMeals.length > 0
     ? `\nユーザーの直近の食事内容（これと被らないような異なる味付けを考慮してください）:\n${recentMeals.map((m, i) => `- ${m}`).join("\n")}\n`
     : "";
+  const dislikedIngredientsStr = dislikedIngredients && dislikedIngredients.length > 0
+    ? dislikedIngredients.join("、")
+    : "なし";
 
   // サーバーサイドの現在時刻から「現在の月」を判定
   const today = new Date();
@@ -151,6 +158,11 @@ export async function suggestMenusServer(ingredients: string[], recentMeals?: st
   const systemPrompt = `あなたはプロの料理研究家兼管理栄養士です。ユーザーが指定した冷蔵庫の残り食材「${ingredientsStr}」を活かした美味しい夕食の献立を提案してください。
 以下のJSONフォーマット（配列形式）で、合計3〜4件のレシピを提案してください。
 ${recentMealsStr}
+【絶対遵守：苦手・除外食材のルール（パーソナライズ）】
+ユーザーは以下の食材・調味料をアレルギーまたは苦手としており、一切食べられません。
+除外食材リスト: 「${dislikedIngredientsStr}」
+提案するレシピ（タイトル、説明、材料、工程ステップ）のいかなる場所にも、上記の除外食材や調味料（およびそれらを主要な材料とする加工食品やタレ、ドレッシング、ソース等。例えばマヨネーズが除外されている場合はマヨネーズを使ったレシピを避け、ブロッコリーが除外されている場合はブロッコリー自体やそれを使った料理を完全に避ける）を**絶対に含めないでください**。代替の食材を使用するか、全く異なる安全なレシピを構築してください。このルールは他のすべてのルールよりも最優先されます。
+
 【超重要：季節感の考慮ルール】
 現在の月は **${currentMonth}月** です。この季節の気温や気候にふさわしい、季節感のある美味しい夕食メニューを提案してください。
 - 春・秋（3〜5月、9〜11月）: 過ごしやすい気候に合わせた、標準的な温かさの料理や季節の旬を活かした定番おかず。
