@@ -3,22 +3,28 @@
 import { MenuSuggestion } from "../types";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+const GEMINI_API_URL_LITE = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent";
+const GEMINI_API_URL_2_5_FLASH = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
 /**
  * Helper to call Google Gemini API securely on the server-side.
  */
-async function callGemini(contents: any[]): Promise<string> {
+async function callGemini(contents: any[], apiUrl: string, generationConfig?: any): Promise<string> {
   if (!GEMINI_API_KEY || GEMINI_API_KEY === "YOUR_GEMINI_API_KEY_HERE") {
     throw new Error("GEMINI_API_KEY が設定されていません。.env.local ファイルにAPIキーを設定してください。");
   }
 
-  const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+  const requestBody: any = { contents };
+  if (generationConfig) {
+    requestBody.generationConfig = generationConfig;
+  }
+
+  const response = await fetch(`${apiUrl}?key=${GEMINI_API_KEY}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ contents }),
+    body: JSON.stringify(requestBody),
   });
 
   if (!response.ok) {
@@ -86,7 +92,7 @@ export async function generateMealLogServer(rawInput: string, customDate?: strin
   ];
 
   try {
-    return await callGemini(contents);
+    return await callGemini(contents, GEMINI_API_URL_LITE);
   } catch (error: any) {
     console.error("Failed to generate meal log using Gemini:", error);
     throw error;
@@ -127,7 +133,7 @@ export async function analyzeMealImageServer(formData: FormData): Promise<string
   ];
 
   try {
-    const responseText = await callGemini(contents);
+    const responseText = await callGemini(contents, GEMINI_API_URL_2_5_FLASH);
     return responseText.trim();
   } catch (error: any) {
     console.error("Failed to analyze image using Gemini:", error);
@@ -216,7 +222,7 @@ ${recentMeals && recentMeals.length > 0 ? `ユーザーの直近の食事内容�
   ];
 
   try {
-    const rawJson = await callGemini(contents);
+    const rawJson = await callGemini(contents, GEMINI_API_URL_LITE, { responseMimeType: "application/json" });
     // Clean up codeblock markers if generated
     const cleanJson = rawJson.replace(/```json/i, "").replace(/```/g, "").trim();
     const parsed = JSON.parse(cleanJson) as MenuSuggestion[];
