@@ -488,13 +488,16 @@ export const aiService = {
     const vegEval = hasVegetable ? "🟢 良好 (ビタミンや食物繊維が含まれています)" : "🟡 やや控えめ (野菜を追加するとさらに健康的です)";
     const carbsEval = hasCarbs ? "🟢 適量 (エネルギー源が確保されています)" : "🟡 控えめ (炭水化物控えめのお食事です)";
 
+    const commentText = comments.length > 0
+      ? `${comments.join(" ")}\n元のメモ: 「${rawInput}」`
+      : `元のメモ: 「${rawInput}」`;
+
     return `# 🍽️ 今日の夕食ログ (${formattedDate})
 
 ## 🍲 本日の献立
 ${dishesMd || "- 記録された献立はありません\n"}
 ## 💬 感想・メモ
-${comments.join(" ")}
-元のメモ: 「${rawInput}」
+${commentText}
 
 ## 📊 栄養バランス評価
 - **タンパク質**: ${proteinEval}
