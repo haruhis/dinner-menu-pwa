@@ -288,10 +288,10 @@ export const aiService = {
       },
       {
         title: "【コク旨中華】おすすめセット：シャキシャキキャベツの回鍋肉ととろとろ卵スープセット",
-        description: "豆板醤と甜麺醤のコクがキャベツと豚肉に絡む回鍋肉をメインに、ふんわり優しい中華風卵スープを合わせたスタミナ満点の中許セットです。主菜：回鍋肉、副菜：たたききゅうりの塩ごま油和え、汁物：とろみ卵スープ。",
+        description: "豆板醤と甜麺醤のコクがキャベツと豚肉に絡む回鍋肉をメインに、ふんわり優しい中華風卵スープを合わせたスタミナ満点の中華セットです。主菜：回鍋肉、副菜：たたききゅうりの塩ごま油和え、汁物：とろみ卵スープ。",
         steps: [
-          "1. 【下準備＆汁物】お鍋に中華スープの素と水を沸かし、水溶き片栗粉でとろみをつけてから溶き卵を回し入れます。",
-          "2. 【副菜】きゅうりを叩いて割り、ごごま油と塩、ニンニク少々で和えておきます。",
+          "1. 【下準備＆汁物】お鍋に中華スープ of 素と水を沸かし、水溶き片栗粉でとろみをつけてから溶き卵を回し入れます。",
+          "2. 【副菜】きゅうりを叩いて割り、ごま油と塩、ニンニク少々で和えておきます。",
           "3. 【主菜】豚バラ肉とキャベツ、ピーマンを強火で素早く炒め、特製中華味噌ダレを一気に絡めてシャキシャキに仕上げます。"
         ],
         required: ["豚肉", "キャベツ"],
@@ -316,7 +316,7 @@ export const aiService = {
         description: "切って和えるだけで完成する、夏場や疲れた夜にぴったりの超スピードおかず。ポン酢の酸味と大葉の香りが絶妙です。",
         steps: [
           "トマトを一口大のくし形に切り、大葉は細い千切りにします。",
-          "ボウルにトマトと大葉を入れ、ポン酢大さじ1、ごごま油小さじ1、すりごごま少々を加えて優しく和えます。",
+          "ボウルにトマトと大葉を入れ、ポン酢大さじ1、ごま油小さじ1、すりごま少々を加えて優しく和えます。",
           "冷蔵庫で5分ほど冷やすと、味がさらに馴染んで美味しく召し上がれます。"
         ],
         required: ["トマト"],
@@ -339,11 +339,57 @@ export const aiService = {
         description: "千切りキャベツをたっぷり使い、モチモチの生地とカリッと焼けた表面がたまらない、おやつ感覚でも食べられるスピードおかずです。※「とろけるチーズ」を買い足すことで、コクと旨味が溢れる絶品チヂミになります！",
         steps: [
           "キャベツを細い千切りにします。小麦粉50g、片栗粉30g、水80ml、鶏ガラスープの素小さじ1を混ぜて生地を作ります。",
-          "生地にキャベツを混ぜ合わせ、フライパンにごごま油を熱して薄く広げて両面をこんがりと焼きます。",
+          "生地にキャベツを混ぜ合わせ、フライパンにごま油を熱して薄く広げて両面をこんがりと焼きます。",
           "ひっくり返した後に買い足したチーズをたっぷりとのせ、フタをしてチーズがとろけるまで蒸し焼きにします。"
         ],
         required: ["キャベツ"],
         missingIngredient: "チーズ",
+        isSet: false
+      },
+      {
+        title: "【王道おかず】豚肉と玉ねぎの極旨生姜焼き（要: 玉ねぎ追加）",
+        description: "甘辛いタレと生姜の香りが食欲をそそる、ご飯が進む生姜焼きです。※「玉ねぎ」を買い足すことで、お肉の甘みが引き立つ定番おかずになります。",
+        steps: [
+          "豚肉に軽く塩コショウをし、小麦粉を薄くまぶします。買い足した玉ねぎは薄切りにしておきます。",
+          "醤油、みりん、酒、すりおろし生姜を混ぜて合わせタレを作ります。",
+          "フライパンで豚肉と玉ねぎを炒め、火が通ったらタレを流し込んで煮詰めながら絡めます。"
+        ],
+        required: ["豚肉"],
+        missingIngredient: "玉ねぎ",
+        isSet: false
+      },
+      {
+        title: "【ほっこり洋風】完熟トマトと豆腐のヘルシーカプレーゼ風",
+        description: "みずみずしいトマトとさっぱりしたお豆腐を、オリーブオイルと塩胡椒でイタリアン風に仕上げた、彩り華やかな冷菜です。胃に優しくヘルシーな一品。",
+        steps: [
+          "トマトとお豆腐を一口大の角切りまたはスライスにします。",
+          "ボウルにトマトとお豆腐を入れ、オリーブオイル大さじ1、塩少々、黒コショウ、あれば乾燥バジルを振ります。",
+          "優しく和えて器に盛り付け、冷蔵庫で少し冷やしてから召し上がります。"
+        ],
+        required: ["トマト", "豆腐"],
+        isSet: false
+      },
+      {
+        title: "【ご飯が進む】ジューシー鶏肉とキャベツのコク旨味噌炒め",
+        description: "鶏肉のジューシーな旨味と甘みのあるキャベツに、濃厚な特製味噌だれがたっぷり絡む大満足のおかずです。",
+        steps: [
+          "鶏肉は一口大に切り、キャベツはざく切りにします。味噌、醤油、砂糖、みりんを混ぜ合わせて味噌ダレを作ります。",
+          "フライパンに油を引き、鶏肉を入れて皮目からじっくり焼き、火が通ったらキャベツを加えて強火で炒めます。",
+          "キャベツが少ししんなりしたら、味噌ダレを投入して手早く炒め合わせます。"
+        ],
+        required: ["鶏肉", "キャベツ"],
+        isSet: false
+      },
+      {
+        title: "【お魚ヘルシー】鮭とキャベツの旨塩バター蒸し（要: バター追加）",
+        description: "鮭の旨味とキャベツの甘みが塩バターの香りで引き立つ、ふっくらヘルシーな蒸し焼きです。※「バター」を買い足すことで、コク深い風味になります。",
+        steps: [
+          "キャベツをざく切りにしてフライパンの底に敷き、その上に魚（鮭の切り身）をのせ、軽く塩と酒を振ります。",
+          "フタをして弱火〜中火で8〜10分ほどじっくり蒸し焼きにします。",
+          "鮭に火が通ったら、仕上げに買い足したバター10gをのせ、フタをして余熱で溶かします。"
+        ],
+        required: ["魚", "キャベツ"],
+        missingIngredient: "バター",
         isSet: false
       }
     ];
@@ -391,9 +437,19 @@ export const aiService = {
       });
     }
 
-    // 3. Avoid already displayed items
+    // 3. Avoid already displayed items with exhaustion auto-reset safeguard
     if (avoid.length > 0) {
-      allGenerated = allGenerated.filter(recipe => isRecipeNew(recipe.title, avoid));
+      const filtered = allGenerated.filter(recipe => isRecipeNew(recipe.title, avoid));
+      const setsCount = filtered.filter(r => r.isSet).length;
+      const singlesCount = filtered.filter(r => !r.isSet).length;
+
+      // Keep duplicate avoidance only if we have at least 1 set and 3 singles left in the pool.
+      // If we fall below this threshold, bypass avoidTitles to guarantee fresh selections.
+      if (setsCount >= 1 && singlesCount >= 3) {
+        allGenerated = filtered;
+      } else {
+        console.log("Mock AI stock exhausted by avoidTitles. Auto-resetting avoidance constraint.");
+      }
     }
 
     // 4. Fallback/padding logic if filtering reduced items below required count
@@ -440,7 +496,22 @@ export const aiService = {
       mergedSuggestions.forEach(meal => applyTrendRecommendation(meal, trend));
     }
 
-    return mergedSuggestions;
+    // 5. Strict title-based de-duplication to ensure zero repeats or duplicate keys
+    const seen = new Set<string>();
+    const uniqueSuggestions = mergedSuggestions.filter(meal => {
+      const cleanTitle = meal.title
+        .replace(/【.*?】/g, '')
+        .replace(/おすすめセット：/g, '')
+        .replace(/セット/g, '')
+        .replace(/（要:.*追加）/g, '')
+        .replace(/\s+/g, '')
+        .trim();
+      if (seen.has(cleanTitle)) return false;
+      seen.add(cleanTitle);
+      return true;
+    });
+
+    return uniqueSuggestions;
   },
 
   /**

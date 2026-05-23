@@ -123,20 +123,47 @@ export default function SuggestTab() {
 
       const targetDisliked = disliked !== undefined ? disliked : dislikedIngredients;
 
-      const results = await aiService.suggestMenus({ 
+      let results = await aiService.suggestMenus({ 
         ingredients: ings, 
         recentMeals,
         dislikedIngredients: targetDisliked,
         avoidTitles: avoidTitles || []
       }, trend);
 
+      // Safeguard: If the recipe list is empty due to excessive avoidance, 
+      // reset the avoidTitles state and retry with an empty filter to prevent UI freeze
+      if (!results || results.length === 0) {
+        setDisplayedTitles([]);
+        results = await aiService.suggestMenus({ 
+          ingredients: ings, 
+          recentMeals,
+          dislikedIngredients: targetDisliked,
+          avoidTitles: []
+        }, trend);
+      }
+
+      // Secondary strict de-duplication of results to guarantee zero repeats in the client state
+      const seen = new Set<string>();
+      const uniqueResults = (results || []).filter(r => {
+        const cleanT = r.title
+          .replace(/【.*?】/g, '')
+          .replace(/おすすめセット：/g, '')
+          .replace(/セット/g, '')
+          .replace(/（要:.*追加）/g, '')
+          .replace(/\s+/g, '')
+          .trim();
+        if (seen.has(cleanT)) return false;
+        seen.add(cleanT);
+        return true;
+      });
+
       // Separate sets (recommendation meal sets) and singles strictly by tag prefix
-      const sets = results.filter(r => 
+      const sets = uniqueResults.filter(r => 
         r.title.startsWith('【おすすめセット】') || 
         r.title.startsWith('【定食セット】') || 
         r.title.includes('おすすめセット：')
       );
-      const singles = results.filter(r => !sets.includes(r));
+      const singles = uniqueResults.filter(r => !sets.includes(r));
 
       // Display 1 set and up to 3 singles
       const initialSet = sets[0];
@@ -307,61 +334,36 @@ export default function SuggestTab() {
   };
 
   const handleReload = () => {
-    const totalStock = stockedSetSuggestions.length + stockedSingleSuggestions.length;
-    
-    if (totalStock > 0) {
+    // Only reload from stock if we have enough items to assemble a premium layout:
+    // 1 set and 3 singles, or if we have 0 sets but at least 4 singles.
+    // Otherwise, we immediately fetch a fresh batch of 10 unique recipes to avoid half-empty lists.
+    const hasEnoughForSetLayout = stockedSetSuggestions.length >= 1 && stockedSingleSuggestions.length >= 3;
+    const hasEnoughForSingleOnlyLayout = stockedSetSuggestions.length === 0 && stockedSingleSuggestions.length >= 4;
+
+    if (hasEnoughForSetLayout || hasEnoughForSingleOnlyLayout) {
       setExpandedIndex(null);
       
       let nextSet: MenuSuggestion | undefined = undefined;
       let nextSingles: MenuSuggestion[] = [];
 
-      // 1. Extract set if available
-      if (stockedSetSuggestions.length >= 1) {
+      if (hasEnoughForSetLayout) {
         nextSet = stockedSetSuggestions[0];
+        nextSingles = stockedSingleSuggestions.slice(0, 3);
         setStockedSetSuggestions(prev => prev.slice(1));
+        setStockedSingleSuggestions(prev => prev.slice(3));
       } else {
-        // Keep the previous set displayed in the list if no set remains in stock (for better layout harmony)
-        const currentSet = suggestions.find(s => 
-          s.title.startsWith('【おすすめセット】') || 
-          s.title.startsWith('【定食セット】') || 
-          s.title.includes('おすすめセット：')
-        );
-        nextSet = currentSet;
-      }
-
-      // 2. Extract singles (3 if set is present, 4 if set is absent)
-      const neededSinglesCount = nextSet ? 3 : 4;
-      if (stockedSingleSuggestions.length >= neededSinglesCount) {
-        nextSingles = stockedSingleSuggestions.slice(0, neededSinglesCount);
-        setStockedSingleSuggestions(prev => prev.slice(neededSinglesCount));
-      } else {
-        // Single stock is low, exhaust it and pull extra from remaining sets if possible
-        nextSingles = [...stockedSingleSuggestions];
-        setStockedSingleSuggestions([]);
-
-        const deficit = neededSinglesCount - nextSingles.length;
-        if (deficit > 0 && stockedSetSuggestions.length > 0) {
-          const extraFromSets = stockedSetSuggestions.slice(0, deficit);
-          setStockedSetSuggestions(prev => prev.slice(extraFromSets.length));
-          nextSingles = [...nextSingles, ...extraFromSets];
-        }
+        nextSingles = stockedSingleSuggestions.slice(0, 4);
+        setStockedSingleSuggestions(prev => prev.slice(4));
       }
 
       const nextDisplay = nextSet ? [nextSet, ...nextSingles] : nextSingles;
-      
-      // Fallback: in case we couldn't assemble any recipe, fallback to server fetch
-      if (nextDisplay.length === 0) {
-        fetchSuggestions(ingredients, dislikedIngredients, displayedTitles);
-        return;
-      }
-
       setSuggestions(nextDisplay);
 
       // Accumulate displayed titles to strictly avoid repeats
       const newTitles = nextDisplay.map(d => d.title);
       setDisplayedTitles(prev => Array.from(new Set([...prev, ...newTitles])));
     } else {
-      // Stock is completely exhausted, fetch new batch of 10 recipes
+      // Stock is depleted or insufficient, fetch a fresh batch of 10 recipes
       fetchSuggestions(ingredients, dislikedIngredients, displayedTitles);
     }
   };
@@ -669,7 +671,7 @@ export default function SuggestTab() {
               <div className="space-y-3">
                 {canMakeNowRecipes.map((recipe, idx) => (
                   <RecipeCard
-                    key={recipe.title}
+                    key={`${recipe.title}-${idx}`}
                     recipe={recipe}
                     isExpanded={expandedIndex === idx}
                     onToggle={() => setExpandedIndex(expandedIndex === idx ? null : idx)}
@@ -690,7 +692,7 @@ export default function SuggestTab() {
                   const globalIdx = canMakeNowRecipes.length + idx;
                   return (
                     <RecipeCard
-                      key={recipe.title}
+                      key={`${recipe.title}-${globalIdx}`}
                       recipe={recipe}
                       isExpanded={expandedIndex === globalIdx}
                       onToggle={() => setExpandedIndex(expandedIndex === globalIdx ? null : globalIdx)}
@@ -706,7 +708,7 @@ export default function SuggestTab() {
             <div className="space-y-3">
               {suggestions.map((recipe, idx) => (
                 <RecipeCard
-                  key={recipe.title}
+                  key={`${recipe.title}-${idx}`}
                   recipe={recipe}
                   isExpanded={expandedIndex === idx}
                   onToggle={() => setExpandedIndex(expandedIndex === idx ? null : idx)}
