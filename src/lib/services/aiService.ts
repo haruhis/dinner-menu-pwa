@@ -255,11 +255,11 @@ export const aiService = {
       );
     }
 
-    // 1. Try real Gemini API on Server Side
+    // 1. Try real Gemini API on Server Side (even when rawIngredients is empty)
     try {
-      if (rawIngredients.length > 0) {
-        const avoid = (params as any).avoidTitles || [];
-        const geminiSuggestions = await suggestMenusServer(rawIngredients, recentMeals, disliked, avoid);
+      const avoid = (params as any).avoidTitles || [];
+      const geminiSuggestions = await suggestMenusServer(rawIngredients, recentMeals, disliked, avoid);
+      if (geminiSuggestions && geminiSuggestions.length > 0) {
         if (trend) {
           geminiSuggestions.forEach(meal => applyTrendRecommendation(meal, trend));
         }
