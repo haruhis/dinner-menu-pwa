@@ -55,6 +55,9 @@ export default function SuggestTab() {
   const [inputText, setInputText] = useState('');
   const [ingredients, setIngredients] = useState<string[]>([]);
   const [suggestions, setSuggestions] = useState<MenuSuggestion[]>([]);
+  const [stockedSetSuggestions, setStockedSetSuggestions] = useState<MenuSuggestion[]>([]);
+  const [stockedSingleSuggestions, setStockedSingleSuggestions] = useState<MenuSuggestion[]>([]);
+  const [displayedTitles, setDisplayedTitles] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [dietaryTrend, setDietaryTrend] = useState<DietaryAnalysis | null>(null);
@@ -124,9 +127,32 @@ export default function SuggestTab() {
         ingredients: ings, 
         recentMeals,
         dislikedIngredients: targetDisliked,
-        avoidTitles
+        avoidTitles: avoidTitles || []
       }, trend);
-      setSuggestions(results);
+
+      // Separate sets (recommendation meal sets) and singles
+      const sets = results.filter(r => r.title.includes('おすすめセット') || r.title.includes('定食セット') || r.title.includes('セット'));
+      const singles = results.filter(r => !sets.includes(r));
+
+      // Display 1 set and up to 3 singles
+      const initialSet = sets[0];
+      const initialSingles = singles.slice(0, 3);
+      const initialDisplay = initialSet ? [initialSet, ...initialSingles] : initialSingles;
+
+      // Cache remaining items in stock
+      const remainingSets = initialSet ? sets.slice(1) : sets;
+      const remainingSingles = singles.slice(3);
+
+      setStockedSetSuggestions(remainingSets);
+      setStockedSingleSuggestions(remainingSingles);
+      setSuggestions(initialDisplay);
+
+      const newTitles = initialDisplay.map(d => d.title);
+      if (avoidTitles && avoidTitles.length > 0) {
+        setDisplayedTitles(prev => Array.from(new Set([...prev, ...newTitles])));
+      } else {
+        setDisplayedTitles(newTitles);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -277,8 +303,26 @@ export default function SuggestTab() {
   };
 
   const handleReload = () => {
-    const currentTitles = suggestions.map(s => s.title);
-    fetchSuggestions(ingredients, dislikedIngredients, currentTitles);
+    // Rotate instantly from cache stock if we have enough sets and singles
+    if (stockedSetSuggestions.length >= 1 && stockedSingleSuggestions.length >= 2) {
+      setExpandedIndex(null);
+      
+      const nextSet = stockedSetSuggestions[0];
+      const nextSingles = stockedSingleSuggestions.slice(0, 3);
+      const nextDisplay = nextSet ? [nextSet, ...nextSingles] : nextSingles;
+
+      // Slice out consumed items and update state
+      setStockedSetSuggestions(stockedSetSuggestions.slice(1));
+      setStockedSingleSuggestions(stockedSingleSuggestions.slice(3));
+      setSuggestions(nextDisplay);
+
+      // Accumulate displayed titles to ensure future duplicates are restricted
+      const newTitles = nextDisplay.map(d => d.title);
+      setDisplayedTitles(prev => Array.from(new Set([...prev, ...newTitles])));
+    } else {
+      // Stock is low or exhausted, pull fresh 10 recipes while avoiding all seen titles
+      fetchSuggestions(ingredients, dislikedIngredients, displayedTitles);
+    }
   };
 
   const clearAll = () => {

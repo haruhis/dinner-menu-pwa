@@ -312,6 +312,7 @@ export const aiService = {
     // 1. Try real Gemini API on Server Side
     try {
       if (rawIngredients.length > 0) {
+        const avoid = (params as any).avoidTitles || [];
         const geminiSuggestions = await suggestMenusServer(rawIngredients, recentMeals, disliked, avoid);
         if (trend) {
           geminiSuggestions.forEach(meal => applyTrendRecommendation(meal, trend));
