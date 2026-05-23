@@ -737,6 +737,19 @@ interface RecipeCardProps {
 }
 
 function RecipeCard({ recipe, isExpanded, onToggle }: RecipeCardProps) {
+  // Extract and clean tag and titles dynamically
+  const tagMatch = recipe.title.match(/^【(.*?)】(.*)$/);
+  let tag = "";
+  let cleanTitle = recipe.title;
+
+  if (tagMatch) {
+    tag = tagMatch[1];
+    cleanTitle = tagMatch[2].trim();
+  }
+
+  // Remove duplicate missing instructions like "（要: レタス追加）" or "(要:レタス追加)"
+  cleanTitle = cleanTitle.replace(/[（(]要[:：]\s*.*追加[）)]/g, "").trim();
+
   return (
     <div
       onClick={onToggle}
@@ -748,9 +761,28 @@ function RecipeCard({ recipe, isExpanded, onToggle }: RecipeCardProps) {
     >
       <div className="p-4">
         <div className="flex items-start justify-between gap-2">
-          <div className="space-y-1">
-            <h4 className="font-extrabold text-slate-100 text-sm sm:text-base transition-colors duration-200 group-hover:text-amber-400 flex flex-wrap items-center gap-1.5">
-              <span>{recipe.title}</span>
+          <div className="space-y-1.5 flex-1 min-w-0">
+            {tag && (
+              <div className="mb-1">
+                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xxs font-black tracking-wider border ${
+                  tag.includes('おすすめセット') || tag.includes('定食')
+                    ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400'
+                    : tag.includes('王道')
+                    ? 'bg-blue-500/10 border-blue-500/30 text-blue-300'
+                    : tag.includes('意外')
+                    ? 'bg-purple-500/10 border-purple-500/30 text-purple-300'
+                    : tag.includes('カフェ') || tag.includes('モダン')
+                    ? 'bg-pink-500/10 border-pink-500/30 text-pink-300'
+                    : tag.includes('簡単') || tag.includes('スピード')
+                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                    : 'bg-slate-700/30 border-slate-700/50 text-slate-300'
+                }`}>
+                  {tag}
+                </span>
+              </div>
+            )}
+            <h4 className="font-extrabold text-slate-100 text-sm sm:text-base transition-colors duration-200 group-hover:text-amber-400 flex flex-wrap items-center gap-1.5 leading-snug">
+              <span>{cleanTitle}</span>
               {recipe.isDietitianRecommended && (
                 <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/35 text-emerald-400 text-xxs font-extrabold tracking-wide animate-pulse">
                   ⭐ おすすめ
