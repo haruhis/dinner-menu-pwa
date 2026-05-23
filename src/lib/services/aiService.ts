@@ -103,6 +103,17 @@ const isRecipeSafe = (recipe: { title: string; description: string; steps: strin
   return true;
 };
 
+// Helper to check if a recipe title is unique (not already recommended)
+const isRecipeNew = (title: string, avoid: string[]) => {
+  if (avoid.length === 0) return true;
+  return !avoid.some(t => {
+    const tClean = t.replace(/（要:.*追加）/g, "").replace(/【定食セット】/g, "").toLowerCase().trim();
+    const titleClean = title.replace(/（要:.*追加）/g, "").replace(/【定食セット】/g, "").toLowerCase().trim();
+    if (!tClean || !titleClean) return false;
+    return titleClean.includes(tClean) || tClean.includes(titleClean);
+  });
+};
+
 // Pre-defined rich recipe catalog for intelligent matching (Mock Fallback)
 interface CatalogRecipe {
   title: string;
@@ -289,6 +300,7 @@ export const aiService = {
     let rawIngredients = params.ingredients.map(i => i.trim()).filter(i => i.length > 0);
     const recentMeals = params.recentMeals || [];
     const disliked = params.dislikedIngredients || [];
+    const avoid = params.avoidTitles || [];
 
     // ユーザー指定の材料から苦手・除外食材を除去する
     if (disliked.length > 0) {
@@ -300,7 +312,7 @@ export const aiService = {
     // 1. Try real Gemini API on Server Side
     try {
       if (rawIngredients.length > 0) {
-        const geminiSuggestions = await suggestMenusServer(rawIngredients, recentMeals, disliked);
+        const geminiSuggestions = await suggestMenusServer(rawIngredients, recentMeals, disliked, avoid);
         if (trend) {
           geminiSuggestions.forEach(meal => applyTrendRecommendation(meal, trend));
         }
@@ -314,10 +326,10 @@ export const aiService = {
     await delay(900); // Simulate network/LLM latency
 
     if (rawIngredients.length === 0) {
-      // Return 3 random safe ones shuffled
-      let safeRandom = RANDOM_MEALS.filter(meal => isRecipeSafe(meal, disliked));
+      // Return 3 random safe and new ones shuffled
+      let safeRandom = RANDOM_MEALS.filter(meal => isRecipeSafe(meal, disliked) && isRecipeNew(meal.title, avoid));
       if (safeRandom.length < 3) {
-        const safeFallbacks = SAFE_FALLBACK_MEALS.filter(meal => isRecipeSafe(meal, disliked));
+        const safeFallbacks = SAFE_FALLBACK_MEALS.filter(meal => isRecipeSafe(meal, disliked) && isRecipeNew(meal.title, avoid));
         safeRandom = [...safeRandom, ...safeFallbacks];
       }
 
@@ -344,7 +356,7 @@ export const aiService = {
 
     // Filter catalog
     for (const recipe of RECIPE_CATALOG) {
-      if (!isRecipeSafe(recipe, disliked)) {
+      if (!isRecipeSafe(recipe, disliked) || !isRecipeNew(recipe.title, avoid)) {
         continue;
       }
 

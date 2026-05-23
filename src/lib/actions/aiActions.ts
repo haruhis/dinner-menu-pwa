@@ -147,7 +147,8 @@ export async function analyzeMealImageServer(formData: FormData): Promise<string
 export async function suggestMenusServer(
   ingredients: string[], 
   recentMeals?: string[],
-  dislikedIngredients?: string[]
+  dislikedIngredients?: string[],
+  avoidTitles?: string[]
 ): Promise<MenuSuggestion[]> {
   const ingredientsStr = ingredients.join("、");
   const recentMealsStr = recentMeals && recentMeals.length > 0
@@ -156,14 +157,17 @@ export async function suggestMenusServer(
   const dislikedIngredientsStr = dislikedIngredients && dislikedIngredients.length > 0
     ? dislikedIngredients.join("、")
     : "なし";
+  const avoidTitlesStr = avoidTitles && avoidTitles.length > 0
+    ? `\n【絶対遵守：以下のレシピは既に提案済みであるため、「絶対に異なる」新しい別のレシピを提案してください（名前・味付け・構成の被り禁止）】:\n${avoidTitles.map(t => `- ${t}`).join("\n")}\n`
+    : "";
 
   // サーバーサイドの現在時刻から「現在の月」を判定
   const today = new Date();
   const currentMonth = today.getMonth() + 1; // 1-12
 
   const systemPrompt = `あなたはプロの料理研究家兼管理栄養士です。ユーザーが指定した冷蔵庫の残り食材「${ingredientsStr}」を活かした美味しい夕食の献立を提案してください。
-以下のJSONフォーマット（配列形式）で、合計3〜4件のレシピを提案してください。
-${recentMealsStr}
+以下のJSONフォーマット（配列形式）で, 合計3〜4件のレシピを提案してください。
+${recentMealsStr}${avoidTitlesStr}
 【絶対遵守：苦手・除外食材のルール（パーソナライズ）】
 ユーザーは以下の食材・調味料をアレルギーまたは苦手としており、一切食べられません。
 除外食材リスト: 「${dislikedIngredientsStr}」

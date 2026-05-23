@@ -11,6 +11,7 @@ export interface SuggestionParams {
   ingredients: string[];
   recentMeals?: string[]; // 直近の食事ログ
   dislikedIngredients?: string[]; // 苦手・除外食材
+  avoidTitles?: string[]; // 避けるべき既存のレシピタイトル
 }
 
 export interface MealLog {

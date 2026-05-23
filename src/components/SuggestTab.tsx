@@ -104,7 +104,7 @@ export default function SuggestTab() {
     }
   }, [isLoaded]);
 
-  const fetchSuggestions = async (ings: string[], disliked?: string[]) => {
+  const fetchSuggestions = async (ings: string[], disliked?: string[], avoidTitles?: string[]) => {
     setLoading(true);
     setExpandedIndex(null);
     try {
@@ -123,7 +123,8 @@ export default function SuggestTab() {
       const results = await aiService.suggestMenus({ 
         ingredients: ings, 
         recentMeals,
-        dislikedIngredients: targetDisliked 
+        dislikedIngredients: targetDisliked,
+        avoidTitles
       }, trend);
       setSuggestions(results);
     } catch (e) {
@@ -276,7 +277,8 @@ export default function SuggestTab() {
   };
 
   const handleReload = () => {
-    fetchSuggestions(ingredients, dislikedIngredients);
+    const currentTitles = suggestions.map(s => s.title);
+    fetchSuggestions(ingredients, dislikedIngredients, currentTitles);
   };
 
   const clearAll = () => {
