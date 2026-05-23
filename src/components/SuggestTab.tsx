@@ -737,14 +737,16 @@ interface RecipeCardProps {
 }
 
 function RecipeCard({ recipe, isExpanded, onToggle }: RecipeCardProps) {
-  // Extract and clean tag and titles dynamically
-  const tagMatch = recipe.title.match(/^【(.*?)】(.*)$/);
+  // Extract and clean tag and titles dynamically (supports bracket variations and leading symbols)
+  const tagMatch = recipe.title.match(/[【\[](.*?)[】\]](.*)$/);
   let tag = "";
   let cleanTitle = recipe.title;
 
   if (tagMatch) {
-    tag = tagMatch[1];
+    tag = tagMatch[1].trim();
     cleanTitle = tagMatch[2].trim();
+    // Clean up remaining Japanese quotation marks if any
+    cleanTitle = cleanTitle.replace(/^[「『]/, "").replace(/[」』]$/, "").trim();
   }
 
   // Remove duplicate missing instructions like "（要: レタス追加）" or "(要:レタス追加)"
