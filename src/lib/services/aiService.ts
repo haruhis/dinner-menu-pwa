@@ -217,60 +217,6 @@ const RECIPE_CATALOG: CatalogRecipe[] = [
   }
 ];
 
-// Rich recipes for empty ingredients input
-const RANDOM_MEALS: MenuSuggestion[] = [
-  {
-    title: "ジューシー極上ハンバーグ定食",
-    description: "お肉の旨味をぎゅっと閉じ込めた、ふっくら手作りデミグラスハンバーグ。大人も子供も喜ぶ定番のごちそうです。",
-    steps: [
-      "玉ねぎをみじん切りにして炒め、しっかり冷ましておく。",
-      "合挽き肉、塩コショウ、パン粉、牛乳、卵、冷ました玉ねぎをボウルに入れ、粘りが出るまでよく捏ねる。",
-      "空気を抜きながら小判型に成形し、真ん中を少しくぼませて中火で両面を焼き、フタをして極弱火で蒸し焼きにする。",
-      "肉汁の残ったフライパンにケチャップ、ウスターソース、みりんを加えて特製デミグラスソースを作る。"
-    ]
-  },
-  {
-    title: "お魚とたっぷりお野菜の健康和食定食",
-    description: "香ばしく焼き上げた焼き魚に、彩り豊かな季節野菜の小鉢を添えた、栄養バランス満点なヘルシーメニューです。",
-    steps: [
-      "魚（サバや鮭など）に塩を振り、水分を拭き取ってからグリルで皮目がパリッとなるまで両面焼く。",
-      "ニンジン、大根、ほうれん草などお手持ちの温野菜を一口大にカットする。",
-      "醤油、すりごま、砂糖、だし汁を合わせた和風ダレで和え、お野菜の小鉢を作る。",
-      "お豆腐とわかめのお味噌汁を添えて完成。"
-    ]
-  },
-  {
-    title: "特製ふんわり卵の親子丼",
-    description: "鶏肉の旨味を吸った甘辛いお出汁と、とろとろの半熟卵がご飯にたっぷり絡む、大満足の丼ものです。",
-    steps: [
-      "鶏もも肉を一口大に切り、玉ねぎを薄切りにする。",
-      "小鍋またはフライパンに、醤油・みりん・酒・砂糖・和風だしを入れて沸騰させ、お肉と玉ねぎを煮る。",
-      "具材に火が通り味が染み込んだら、溶き卵を2回に分けて回し入れる。",
-      "1回目はフタをして1分、2回目を入れてすぐに火を止め、余熱で半熟に仕上げて温かいご飯にのせる。"
-    ]
-  },
-  {
-    title: "スタミナ満点！特製回鍋肉定食",
-    description: "甘辛い合わせ味噌のタレがシャキシャキのキャベツと豚肉にたっぷり絡んだ、ご飯が無限に進む中華の大定番です。",
-    steps: [
-      "豚バラ肉を一口大に切り、キャベツ、ピーマンを乱切りにする。",
-      "フライパンに油を引き、豆板醤とニンニクを熱し、豚肉を炒めて一度取り出す。",
-      "同じフライパンでキャベツとピーマンを強火で素早く炒め、シャキシャキ感を残す。",
-      "お肉を戻し入れ、甜麺醤・醤油・酒・砂糖を合わせたタレを一気に流し込んで強火で絡める。"
-    ]
-  },
-  {
-    title: "コク旨たっぷり肉豆腐スープ仕立て",
-    description: "牛肉または豚肉の甘みとお豆腐のなめらかさが、和風のお出汁でじんわり温まる、優しく豊かな一品です。",
-    steps: [
-      "お豆腐を大きめの角切りにし、お肉（薄切り肉）は食べやすい大きさに切る。",
-      "お鍋に醤油、みりん、砂糖、酒、和風だしを合わせ、玉ねぎを入れてしんなりするまで煮る。",
-      "お肉とお豆腐を加え、弱火でじっくり10分ほど煮込んで味を染み込ませる。",
-      "仕上げにネギを散らし、七味唐辛子をお好みで添える。"
-    ]
-  }
-];
-
 const applyTrendRecommendation = (meal: MenuSuggestion, trend: DietaryAnalysis) => {
   const text = ((meal.title || '') + " " + (meal.description || '')).toLowerCase();
   
@@ -326,179 +272,175 @@ export const aiService = {
     // 2. Mock Fallback
     await delay(900); // Simulate network/LLM latency
 
-    if (rawIngredients.length === 0) {
-      // Return 3 random safe and new ones shuffled
-      let safeRandom = RANDOM_MEALS.filter(meal => isRecipeSafe(meal, disliked) && isRecipeNew(meal.title, avoid));
-      if (safeRandom.length < 3) {
-        const safeFallbacks = SAFE_FALLBACK_MEALS.filter(meal => isRecipeSafe(meal, disliked) && isRecipeNew(meal.title, avoid));
-        safeRandom = [...safeRandom, ...safeFallbacks];
+    // Predefined 10 premium meal templates: 3 sets and 7 singles
+    const MOCK_RECIPE_TEMPLATES = [
+      // 3 おすすめセット (Teishoku sets)
+      {
+        title: "【ほっこり和食】おすすめセット：ふっくら照り焼きチキンと大根のコク旨お味噌汁セット",
+        description: "ジューシーな鶏もも肉を甘辛い黄金ダレで焼き上げた照り焼きを主役に、出汁の染みた大根のお味噌汁とさっぱり小鉢を添えた、大満足の和食セットです。主菜：照り焼きチキン、副菜：ほうれん草のお浸し、汁物：大根とお豆腐のお味噌汁。",
+        steps: [
+          "1. 【下準備＆汁物】大根とお豆腐を切り、お鍋で出汁と一緒にコトコト煮て、仕上げに味噌を溶き入れます。",
+          "2. 【副菜】ほうれん草をサッと茹でて水気を絞り、醤油とすりごまで和えて小鉢を作ります。",
+          "3. 【主菜】鶏もも肉をフライパンで皮目からパリッと焼き、醤油・みりん・酒・砂糖の合わせダレを絡めて照りよく仕上げます。"
+        ],
+        required: ["鶏肉"],
+        isSet: true
+      },
+      {
+        title: "【コク旨中華】おすすめセット：シャキシャキキャベツの回鍋肉ととろとろ卵スープセット",
+        description: "豆板醤と甜麺醤のコクがキャベツと豚肉に絡む回鍋肉をメインに、ふんわり優しい中華風卵スープを合わせたスタミナ満点の中許セットです。主菜：回鍋肉、副菜：たたききゅうりの塩ごま油和え、汁物：とろみ卵スープ。",
+        steps: [
+          "1. 【下準備＆汁物】お鍋に中華スープの素と水を沸かし、水溶き片栗粉でとろみをつけてから溶き卵を回し入れます。",
+          "2. 【副菜】きゅうりを叩いて割り、ごごま油と塩、ニンニク少々で和えておきます。",
+          "3. 【主菜】豚バラ肉とキャベツ、ピーマンを強火で素早く炒め、特製中華味噌ダレを一気に絡めてシャキシャキに仕上げます。"
+        ],
+        required: ["豚肉", "キャベツ"],
+        isSet: true
+      },
+      {
+        title: "【さっぱり和食】おすすめセット：香ばし鮭の塩焼きとさっぱり冷奴セット（要: 白ネギ追加）",
+        description: "皮までパリッと香ばしく焼いた鮭の塩焼きに、たっぷりの薬味ネギをのせた冷奴とお吸い物を組み合わせた、胃に優しくヘルシーなヘルシーセットです。※「白ネギ」を買い足すことで、薬味たっぷりの絶品冷奴が完成します！主菜：鮭の塩焼き、副菜：白ネギたっぷり冷奴、汁物：お麩とお出汁のお吸い物。",
+        steps: [
+          "1. 【下準備＆汁物】お鍋にお湯を沸かし、和風だしとお麩を入れてひと煮立ちさせ、薄口醤油と塩で味を調えます。",
+          "2. 【副菜】豆腐をお皿に盛り、買い足した白ネギをみじん切りにしてたっぷりとのせ、ポン酢を回しかけます。",
+          "3. 【主菜】鮭の切り身に塩を振り、グリルで皮目がパリッとなるまで両面を香ばしく焼き上げます。"
+        ],
+        required: ["魚"],
+        missingIngredient: "白ネギ",
+        isSet: true
+      },
+      
+      // 7 単品レシピ
+      {
+        title: "【さっぱり時短】完熟トマトと大葉のさわやかポン酢和え",
+        description: "切って和えるだけで完成する、夏場や疲れた夜にぴったりの超スピードおかず。ポン酢の酸味と大葉の香りが絶妙です。",
+        steps: [
+          "トマトを一口大のくし形に切り、大葉は細い千切りにします。",
+          "ボウルにトマトと大葉を入れ、ポン酢大さじ1、ごごま油小さじ1、すりごごま少々を加えて優しく和えます。",
+          "冷蔵庫で5分ほど冷やすと、味がさらに馴染んで美味しく召し上がれます。"
+        ],
+        required: ["トマト"],
+        isSet: false
+      },
+      {
+        title: "【おしゃれカフェ】鶏肉の極上ガーリックバターソテー（要: ブロッコリー追加）",
+        description: "にんにくの香ばしい香りとバターの深いコクがジューシーな鶏肉に絡む、おうちでカフェ気分を味わえる極上メニューです。※「ブロッコリー」を買い足すことで、彩り豊かなごちそうソテーに変身します！",
+        steps: [
+          "鶏肉は一口大に切り、塩コショウと小麦粉を薄くまぶします。買い足したブロッコリーは小房に分けて下茹でしておきます。",
+          "フライパンにオリーブオイルとスライスにんにくを弱火で熱し、香りが立ったら鶏肉を皮目からじっくり焼きます。",
+          "鶏肉に火が通ったらブロッコリーを加え、バター10gと醤油小さじ1を投入して全体に素早く絡めます。"
+        ],
+        required: ["鶏肉"],
+        missingIngredient: "ブロッコリー",
+        isSet: false
+      },
+      {
+        title: "【とろ〜り時短】キャベツととろけるチーズの極旨チヂミ（要: チーズ追加）",
+        description: "千切りキャベツをたっぷり使い、モチモチの生地とカリッと焼けた表面がたまらない、おやつ感覚でも食べられるスピードおかずです。※「とろけるチーズ」を買い足すことで、コクと旨味が溢れる絶品チヂミになります！",
+        steps: [
+          "キャベツを細い千切りにします。小麦粉50g、片栗粉30g、水80ml、鶏ガラスープの素小さじ1を混ぜて生地を作ります。",
+          "生地にキャベツを混ぜ合わせ、フライパンにごごま油を熱して薄く広げて両面をこんがりと焼きます。",
+          "ひっくり返した後に買い足したチーズをたっぷりとのせ、フタをしてチーズがとろけるまで蒸し焼きにします。"
+        ],
+        required: ["キャベツ"],
+        missingIngredient: "チーズ",
+        isSet: false
+      }
+    ];
+
+    // Helper to dynamically map user ingredients into templates
+    const buildMockRecipe = (template: typeof MOCK_RECIPE_TEMPLATES[0]) => {
+      let title = template.title;
+      let description = template.description;
+      let steps = [...template.steps];
+      const required = [...template.required];
+      const missingIngredient = template.missingIngredient || "";
+
+      if (rawIngredients.length > 0) {
+        required.forEach((req, idx) => {
+          // Map user ingredients in a round-robin cycle
+          const userIng = rawIngredients[idx % rawIngredients.length];
+          const reqRegex = new RegExp(req, "g");
+          
+          title = title.replace(reqRegex, userIng);
+          description = description.replace(reqRegex, userIng);
+          steps = steps.map(step => step.replace(reqRegex, userIng));
+        });
       }
 
-      const shuffled = [...safeRandom].sort(() => 0.5 - Math.random());
-      const selected = shuffled.slice(0, 3).map(meal => ({ ...meal }));
-      if (trend) {
-        selected.forEach(meal => applyTrendRecommendation(meal, trend));
-      }
-      return selected;
-    }
-
-    // Normalized lookup
-    const userIngs = rawIngredients.map(ing => ing.toLowerCase());
-
-    const canMakeNow: MenuSuggestion[] = [];
-    const missingOne: MenuSuggestion[] = [];
-
-    // Simple matching helper
-    const matchesIngredient = (requiredItem: string, userList: string[]) => {
-      return userList.some(userItem => 
-        requiredItem.includes(userItem) || userItem.includes(requiredItem)
-      );
+      return {
+        title,
+        description,
+        steps,
+        missingIngredient,
+        isSet: template.isSet
+      } as MenuSuggestion & { isSet: boolean };
     };
 
-    // Filter catalog
-    for (const recipe of RECIPE_CATALOG) {
-      if (!isRecipeSafe(recipe, disliked) || !isRecipeNew(recipe.title, avoid)) {
-        continue;
-      }
+    // 1. Build all 10 templates dynamically
+    let allGenerated = MOCK_RECIPE_TEMPLATES.map(buildMockRecipe);
 
-      const matchCount = recipe.required.filter(req => matchesIngredient(req, userIngs)).length;
-      const totalRequired = recipe.required.length;
-
-      if (matchCount === totalRequired) {
-        canMakeNow.push({
-          title: recipe.title,
-          description: recipe.description,
-          steps: recipe.steps
-        });
-      } else if (matchCount === totalRequired - 1 && totalRequired > 1) {
-        const missingReq = recipe.required.find(req => !matchesIngredient(req, userIngs));
-        if (missingReq) {
-          const item = {
-            title: `${recipe.title} (要: ${missingReq}追加)`,
-            description: `${recipe.description} ※「${missingReq}」を買い足すことで、この絶品メニューが完成します！`,
-            missingIngredient: missingReq,
-            steps: recipe.steps
-          };
-          if (isRecipeSafe(item, disliked)) {
-            missingOne.push(item);
-          }
-        }
-      }
-
-      for (const opt of recipe.missingOptions) {
-        if (containsDisliked(opt.ingredient, disliked)) {
-          continue;
-        }
-
-        const hasAllRequired = recipe.required.every(req => matchesIngredient(req, userIngs));
-        const userHasOpt = matchesIngredient(opt.ingredient, userIngs);
-
-        if (hasAllRequired && !userHasOpt) {
-          const item = {
-            title: opt.titleWithMissing,
-            description: opt.descWithMissing,
-            missingIngredient: opt.ingredient,
-            steps: recipe.steps
-          };
-          if (isRecipeSafe(item, disliked)) {
-            missingOne.push(item);
-          }
-        }
-      }
+    // 2. Strong disliked ingredients filtering
+    if (disliked.length > 0) {
+      allGenerated = allGenerated.filter(recipe => {
+        if (containsDisliked(recipe.title, disliked)) return false;
+        if (containsDisliked(recipe.description, disliked)) return false;
+        if (recipe.steps.some(step => containsDisliked(step, disliked))) return false;
+        if (recipe.missingIngredient && containsDisliked(recipe.missingIngredient, disliked)) return false;
+        return true;
+      });
     }
 
-    // Dynamic Generator Fallback:
-    if (canMakeNow.length === 0 && rawIngredients.length > 0) {
-      const mainIng = rawIngredients[0];
-      const subIngStr = rawIngredients.slice(1).join("と") || "常備菜";
-      
-      const item1 = {
-        title: `${mainIng}の極上特製炒め`,
-        description: `今ある新鮮な${mainIng}${rawIngredients.length > 1 ? `と${subIngStr}` : ''}の風味を最大限に活かした、特製の簡単和風炒め物です。醤油とみりんの香ばしい香りが立ち上ります。`,
-        steps: [
-          `${mainIng}とお手持ちの食材を、火が通りやすい大きさに均一にカットします。`,
-          "フライパンにごごま油を熱し、香りが立ったら食材を中火〜強火で素早く炒めます。",
-          "全体に火が通ったら、醤油大さじ1、みりん大さじ1、酒大さじ1、砂糖少々を加え、タレを絡めるように炒め上げます。"
-        ]
-      };
-      if (isRecipeSafe(item1, disliked)) {
-        canMakeNow.push(item1);
-      }
+    // 3. Avoid already displayed items
+    if (avoid.length > 0) {
+      allGenerated = allGenerated.filter(recipe => isRecipeNew(recipe.title, avoid));
+    }
 
-      if (rawIngredients.length === 1) {
-        const item2 = {
-          title: `${mainIng}たっぷり和風雑炊`,
-          description: `冷えた体に染み渡る、優しい${mainIng}の出汁スープをベースにしたほかほか雑炊です。`,
+    // 4. Fallback/padding logic if filtering reduced items below required count
+    let safeSets = allGenerated.filter(r => r.isSet);
+    let safeSingles = allGenerated.filter(r => !r.isSet);
+
+    if (safeSets.length < 3) {
+      // Create fallback sets from safe single recipes or static sets
+      const fallbackSets = [
+        {
+          title: "【ほっこり和食】おすすめセット：香ばし焼きおにぎりとあったか味噌汁セット",
+          description: "醤油の香ばしさがたまらない焼きおにぎりと、お豆腐だけのシンプルな味噌汁のセット。ほっこり落ち着く組み合わせです。主菜：香ばし焼きおにぎり、副菜：お漬物、汁物：お豆腐のあったか味噌汁。",
           steps: [
-            `小鍋に水300ml、和風だしの素小さじ1、醤油小さじ1、みりん小さじ1を入れ沸騰させます。`,
-            `細かくカットした${mainIng}と、水洗いしてヌメリを取ったご飯1杯分を加え、弱火で5分煮込みます。`,
-            "仕上げにお好みで塩で味を整え、溶き卵やお好みの薬味を回し入れます。"
-          ]
-        };
-        if (isRecipeSafe(item2, disliked)) {
-          canMakeNow.push(item2);
+            "1. 【下準備＆汁物】だし汁にお豆腐を入れ、味噌を溶き入れて温かいお味噌汁を作ります。",
+            "2. 【副菜】お皿にお好みの塩昆布やたくあんなどのお漬物を用意します。",
+            "3. 【主菜】温かいご飯に少々の塩を混ぜて握り、フライパンで香ばしく焼き、醤油ダレを絡めます。"
+          ],
+          missingIngredient: "",
+          isSet: true
         }
-      } else {
-        const secondIng = rawIngredients[1];
-        const item3 = {
-          title: `${mainIng}と${secondIng}の味わい健康スープ`,
-          description: `素材本来の自然な甘みと旨味をギュッと閉じ込めた、栄養たっぷりの温かいコンソメ風スープです。`,
-          steps: [
-            `${mainIng}と${secondIng}をサイコロ状にカットします。`,
-            "鍋に水400mlとコンソメスープの素1個を入れ、カットした具材を入れ煮立てます。",
-            "具材が柔らかくなるまで弱火で10分ほど煮込み、仕上げに塩コショウで味を調えます。"
-          ]
-        };
-        if (isRecipeSafe(item3, disliked)) {
-          canMakeNow.push(item3);
-        }
-      }
+      ].filter(r => isRecipeSafe(r, disliked) && isRecipeNew(r.title, avoid));
+      safeSets = [...safeSets, ...fallbackSets];
     }
 
-    if (missingOne.length === 0 && rawIngredients.length > 0) {
-      const mainIng = rawIngredients[0];
-      const commonAdditions = ["とろけるチーズ", "シャキシャキ玉ねぎ", "新鮮な完熟トマト", "ふんわり卵"];
-      const safeAdditions = commonAdditions.filter(add => !containsDisliked(add, disliked));
-
-      if (safeAdditions.length > 0) {
-        const randomAdd = safeAdditions[Math.floor(Math.random() * safeAdditions.length)];
-        const missingName = randomAdd.replace(/(とろける|シャキシャキ|新鮮な|ふんわり)/, "").trim();
-
-        const item = {
-          title: `${mainIng}と${randomAdd}の黄金チーズ焼き`,
-          description: `今の${mainIng}に「${missingName}」をあと1つだけ買い足すことで、とろ〜り絶品のオーブン焼きが作れます。おもてなしにもピッタリ！`,
-          missingIngredient: missingName,
-          steps: [
-            `${mainIng}はあらかじめソテーするか茹でておきます。`,
-            `耐熱皿に具材を並べ、買い足した${missingName}をたっぷりとのせます。`,
-            "オーブントースターまたはグリルで、表面に香ばしい焼き色がつくまで5〜8分焼き上げます。"
-          ]
-        };
-        if (isRecipeSafe(item, disliked)) {
-          missingOne.push(item);
-        }
-      }
+    if (safeSingles.length < 7) {
+      const fallbackSingles = SAFE_FALLBACK_MEALS.map(m => ({
+        title: `【定番の味】${m.title}`,
+        description: m.description,
+        steps: m.steps,
+        missingIngredient: "",
+        isSet: false
+      })).filter(r => isRecipeSafe(r, disliked) && isRecipeNew(r.title, avoid));
+      safeSingles = [...safeSingles, ...fallbackSingles];
     }
 
-    if (canMakeNow.length === 0 && missingOne.length === 0) {
-      const safeFallbacks = SAFE_FALLBACK_MEALS.filter(meal => isRecipeSafe(meal, disliked));
-      canMakeNow.push(...safeFallbacks);
-    }
+    // Pick top 3 sets and 7 singles
+    const finalSets = safeSets.slice(0, 3);
+    const finalSingles = safeSingles.slice(0, 7);
 
+    const mergedSuggestions = [...finalSets, ...finalSingles];
+
+    // Apply dietary trend rules
     if (trend) {
-      canMakeNow.forEach(meal => applyTrendRecommendation(meal, trend));
-      missingOne.forEach(meal => applyTrendRecommendation(meal, trend));
+      mergedSuggestions.forEach(meal => applyTrendRecommendation(meal, trend));
     }
 
-    const finalCanMake = canMakeNow.sort(() => 0.5 - Math.random()).slice(0, 2);
-    const finalMissing = missingOne.sort(() => 0.5 - Math.random()).slice(0, 2);
-
-    if (trend) {
-      finalCanMake.sort((a, b) => (b.isDietitianRecommended ? -1 : 0) - (a.isDietitianRecommended ? -1 : 0));
-      finalMissing.sort((a, b) => (b.isDietitianRecommended ? -1 : 0) - (a.isDietitianRecommended ? -1 : 0));
-    }
-
-    return [...finalCanMake, ...finalMissing];
+    return mergedSuggestions;
   },
 
   /**

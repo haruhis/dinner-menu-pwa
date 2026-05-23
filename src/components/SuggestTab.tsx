@@ -130,8 +130,12 @@ export default function SuggestTab() {
         avoidTitles: avoidTitles || []
       }, trend);
 
-      // Separate sets (recommendation meal sets) and singles
-      const sets = results.filter(r => r.title.includes('おすすめセット') || r.title.includes('定食セット') || r.title.includes('セット'));
+      // Separate sets (recommendation meal sets) and singles strictly by tag prefix
+      const sets = results.filter(r => 
+        r.title.startsWith('【おすすめセット】') || 
+        r.title.startsWith('【定食セット】') || 
+        r.title.includes('おすすめセット：')
+      );
       const singles = results.filter(r => !sets.includes(r));
 
       // Display 1 set and up to 3 singles
@@ -303,24 +307,61 @@ export default function SuggestTab() {
   };
 
   const handleReload = () => {
-    // Rotate instantly from cache stock if we have enough sets and singles
-    if (stockedSetSuggestions.length >= 1 && stockedSingleSuggestions.length >= 2) {
+    const totalStock = stockedSetSuggestions.length + stockedSingleSuggestions.length;
+    
+    if (totalStock > 0) {
       setExpandedIndex(null);
       
-      const nextSet = stockedSetSuggestions[0];
-      const nextSingles = stockedSingleSuggestions.slice(0, 3);
-      const nextDisplay = nextSet ? [nextSet, ...nextSingles] : nextSingles;
+      let nextSet: MenuSuggestion | undefined = undefined;
+      let nextSingles: MenuSuggestion[] = [];
 
-      // Slice out consumed items and update state
-      setStockedSetSuggestions(stockedSetSuggestions.slice(1));
-      setStockedSingleSuggestions(stockedSingleSuggestions.slice(3));
+      // 1. Extract set if available
+      if (stockedSetSuggestions.length >= 1) {
+        nextSet = stockedSetSuggestions[0];
+        setStockedSetSuggestions(prev => prev.slice(1));
+      } else {
+        // Keep the previous set displayed in the list if no set remains in stock (for better layout harmony)
+        const currentSet = suggestions.find(s => 
+          s.title.startsWith('【おすすめセット】') || 
+          s.title.startsWith('【定食セット】') || 
+          s.title.includes('おすすめセット：')
+        );
+        nextSet = currentSet;
+      }
+
+      // 2. Extract singles (3 if set is present, 4 if set is absent)
+      const neededSinglesCount = nextSet ? 3 : 4;
+      if (stockedSingleSuggestions.length >= neededSinglesCount) {
+        nextSingles = stockedSingleSuggestions.slice(0, neededSinglesCount);
+        setStockedSingleSuggestions(prev => prev.slice(neededSinglesCount));
+      } else {
+        // Single stock is low, exhaust it and pull extra from remaining sets if possible
+        nextSingles = [...stockedSingleSuggestions];
+        setStockedSingleSuggestions([]);
+
+        const deficit = neededSinglesCount - nextSingles.length;
+        if (deficit > 0 && stockedSetSuggestions.length > 0) {
+          const extraFromSets = stockedSetSuggestions.slice(0, deficit);
+          setStockedSetSuggestions(prev => prev.slice(extraFromSets.length));
+          nextSingles = [...nextSingles, ...extraFromSets];
+        }
+      }
+
+      const nextDisplay = nextSet ? [nextSet, ...nextSingles] : nextSingles;
+      
+      // Fallback: in case we couldn't assemble any recipe, fallback to server fetch
+      if (nextDisplay.length === 0) {
+        fetchSuggestions(ingredients, dislikedIngredients, displayedTitles);
+        return;
+      }
+
       setSuggestions(nextDisplay);
 
-      // Accumulate displayed titles to ensure future duplicates are restricted
+      // Accumulate displayed titles to strictly avoid repeats
       const newTitles = nextDisplay.map(d => d.title);
       setDisplayedTitles(prev => Array.from(new Set([...prev, ...newTitles])));
     } else {
-      // Stock is low or exhausted, pull fresh 10 recipes while avoiding all seen titles
+      // Stock is completely exhausted, fetch new batch of 10 recipes
       fetchSuggestions(ingredients, dislikedIngredients, displayedTitles);
     }
   };
