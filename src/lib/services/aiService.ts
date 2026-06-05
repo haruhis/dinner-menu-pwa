@@ -456,7 +456,7 @@ export const aiService = {
     let safeSets = allGenerated.filter(r => r.isSet);
     let safeSingles = allGenerated.filter(r => !r.isSet);
 
-    if (safeSets.length < 3) {
+    if (safeSets.length < 2) {
       // Create fallback sets from safe single recipes or static sets
       const fallbackSets = [
         {
@@ -474,7 +474,7 @@ export const aiService = {
       safeSets = [...safeSets, ...fallbackSets];
     }
 
-    if (safeSingles.length < 7) {
+    if (safeSingles.length < 6) {
       const fallbackSingles = SAFE_FALLBACK_MEALS.map(m => ({
         title: `【定番の味】${m.title}`,
         description: m.description,
@@ -489,9 +489,9 @@ export const aiService = {
     const shuffledSets = [...safeSets].sort(() => 0.5 - Math.random());
     const shuffledSingles = [...safeSingles].sort(() => 0.5 - Math.random());
 
-    // Pick top 3 sets and 7 singles
-    const finalSets = shuffledSets.slice(0, 3);
-    const finalSingles = shuffledSingles.slice(0, 7);
+    // Pick top 2 sets and 6 singles (total 8 recipes)
+    const finalSets = shuffledSets.slice(0, 2);
+    const finalSingles = shuffledSingles.slice(0, 6);
 
     const mergedSuggestions = [...finalSets, ...finalSingles];
 
