@@ -485,9 +485,13 @@ export const aiService = {
       safeSingles = [...safeSingles, ...fallbackSingles];
     }
 
+    // Shuffle the safe sets and singles dynamically before slicing to ensure variety on every reload
+    const shuffledSets = [...safeSets].sort(() => 0.5 - Math.random());
+    const shuffledSingles = [...safeSingles].sort(() => 0.5 - Math.random());
+
     // Pick top 3 sets and 7 singles
-    const finalSets = safeSets.slice(0, 3);
-    const finalSingles = safeSingles.slice(0, 7);
+    const finalSets = shuffledSets.slice(0, 3);
+    const finalSingles = shuffledSingles.slice(0, 7);
 
     const mergedSuggestions = [...finalSets, ...finalSingles];
 

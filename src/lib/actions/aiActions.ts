@@ -25,6 +25,7 @@ async function callGemini(contents: any[], apiUrl: string, generationConfig?: an
       "Content-Type": "application/json",
     },
     body: JSON.stringify(requestBody),
+    cache: "no-store", // Ensure Next.js doesn't cache Gemini API responses in production
   });
 
   if (!response.ok) {
