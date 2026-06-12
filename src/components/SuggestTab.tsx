@@ -409,8 +409,8 @@ export default function SuggestTab() {
         <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">
           🍳 今日の晩ごはん提案
         </h1>
-        <p className="text-slate-400 text-xs mt-1">
-          冷蔵庫にある材料を入れるだけで、ぴったりな献立を提案します。
+        <p className="text-slate-400 text-xs mt-1 leading-relaxed">
+          冷蔵庫の食材を入れるだけで、<br />ぴったりな献立を提案します。
         </p>
       </div>
 
@@ -517,19 +517,18 @@ export default function SuggestTab() {
             </div>
             <div className="flex flex-wrap gap-1.5">
               {ingredients.map(ing => (
-                <span
+                <button
                   key={ing}
-                  className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-amber-950/40 border border-amber-900 text-amber-300 text-xs font-medium"
+                  type="button"
+                  onClick={() => handleRemoveIngredient(ing)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-950/40 border border-amber-900 hover:bg-amber-900/60 hover:text-white text-amber-300 text-xs font-semibold active:scale-95 transition-all cursor-pointer group"
+                  title={`${ing}を削除`}
                 >
                   {ing}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveIngredient(ing)}
-                    className="hover:text-white transition-colors"
-                  >
+                  <span className="text-amber-500 group-hover:text-white transition-colors font-bold text-sm">
                     ×
-                  </button>
-                </span>
+                  </span>
+                </button>
               ))}
             </div>
           </div>
@@ -594,19 +593,18 @@ export default function SuggestTab() {
               {dislikedIngredients.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 pt-1.5">
                   {dislikedIngredients.map(ing => (
-                    <span
+                    <button
                       key={ing}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-rose-950/20 border border-rose-900/60 text-rose-300 text-xxs font-medium"
+                      type="button"
+                      onClick={() => handleRemoveDisliked(ing)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-rose-950/20 border border-rose-900/60 hover:bg-rose-900/40 hover:text-white text-rose-300 text-xxs font-semibold active:scale-95 transition-all cursor-pointer group"
+                      title={`${ing}を除外リストから削除`}
                     >
                       <span>🚫 {ing}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveDisliked(ing)}
-                        className="text-rose-400 hover:text-rose-200 transition-colors font-bold text-xs"
-                      >
+                      <span className="text-rose-500 group-hover:text-white transition-colors font-bold text-xs">
                         ×
-                      </button>
-                    </span>
+                      </span>
+                    </button>
                   ))}
                 </div>
               )}
