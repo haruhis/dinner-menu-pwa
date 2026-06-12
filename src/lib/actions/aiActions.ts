@@ -166,7 +166,11 @@ export async function suggestMenusServer(
   const today = new Date();
   const currentMonth = today.getMonth() + 1; // 1-12
 
-  const systemPrompt = `あなたはプロの料理研究家兼管理栄養士です。ユーザーが指定した冷蔵庫の残り食材「${ingredientsStr}」を活かした美味しい夕食の献立を提案してください。
+  const ingredientsPrompt = ingredientsStr
+    ? `ユーザーが指定した冷蔵庫の残り食材「${ingredientsStr}」を活かした美味しい夕食の献立を提案してください。`
+    : `冷蔵庫の残り食材の指定はありません。特定の食材（ズッキーニや豚肉など）だけに偏ることなく、肉、魚、様々な野菜などの家庭的な定番食材をバランスよく散りばめた、バラエティ豊かな夕食の献立を提案してください。`;
+
+  const systemPrompt = `あなたはプロの料理研究家兼管理栄養士です。${ingredientsPrompt}
 以下のJSONフォーマット（配列形式）で, 合計4件のレシピを提案してください。
 ${recentMealsStr}${avoidTitlesStr}
 【絶対遵守：苦手・除外食材のルール（パーソナライズ）】
